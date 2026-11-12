@@ -1,7 +1,8 @@
 /*
  * The playable page: intro -> seven timed rounds -> results, then the next
- * climb. All game rules live in engine.js and the backdrop in scene.js; this
- * file is timing, input and DOM.
+ * climb. There are two ways up: the daily climb, the same for everyone and
+ * played once, and unlimited numbered climbs. All game rules live in
+ * engine.js and the backdrop in scene.js; this file is timing, input and DOM.
  */
 (function () {
   'use strict';
@@ -13,6 +14,8 @@
   const FEEDBACK_MS = 3200; // how long a result stays up before moving on
   const SKIP_GUARD_MS = 350; // ignore the keypress that submitted the answer
   const HISTORY_LIMIT = 500;
+  const GUESS_LIMIT = 20; // turned-away guesses remembered per prompt
+  const DAILY_SEED = 1000000; // keeps the daily's simulated field apart from climb numbers
   const POINTS_PER_FLOOR = 10;
   const TOP_FLOOR = O.MAX_SCORE / POINTS_PER_FLOOR;
   const STORE_KEY = 'academicrillion.v1';
@@ -64,11 +67,14 @@
         localStorage.removeItem(OLD_STORE_KEY);
       }
       const s = JSON.parse(localStorage.getItem(STORE_KEY));
-      if (s && Number.isInteger(s.nextRun) && s.nextRun >= 1 && Array.isArray(s.history)) return s;
+      if (s && Number.isInteger(s.nextRun) && s.nextRun >= 1 && Array.isArray(s.history)) {
+        if (!s.daily || !Number.isInteger(s.daily.day) || !Array.isArray(s.daily.rounds)) s.daily = null;
+        return s;
+      }
     } catch (e) {
       /* unreadable or blocked storage: start fresh */
     }
-    return { nextRun: 1, history: [] };
+    return { nextRun: 1, history: [], daily: null };
   }
 
   function saveStore() {
@@ -112,9 +118,105 @@
     </dl>`;
   }
 
-  // -------------------------------------------------------------------- intro
+  // -------------------------------------------------------------------- daily
 
   let S = null; // the climb in progress, if any
+
+  /*
+   * The daily climb is the same seven prompts for everyone and can be played
+   * once. Its progress is saved after every prompt, so closing the page does
+   * not buy a second look: a prompt that was on screen when the player left
+   * counts as missed.
+   */
+  const today = () => O.dayNumber(new Date());
+  const dailyToday = () => (store.daily && store.daily.day === today() ? store.daily : null);
+  const promptById = new Map(O.prompts.map((p) => [p.id, p]));
+
+  // Time left until the next daily, which starts at the player's midnight.
+  function nextDailyIn() {
+    const now = new Date();
+    const left = Math.max(0, new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1) - now);
+    const two = (n) => String(Math.floor(n)).padStart(2, '0');
+    return `${two(left / 3600000)}:${two((left / 60000) % 60)}:${two((left / 1000) % 60)}`;
+  }
+
+  // What gets recorded says how the climb went, never who climbed.
+  function recordDaily(d) {
+    d.recorded = true;
+    if (!window.RECORDER) return;
+    window.RECORDER.daily({
+      day: d.day,
+      done: !!d.done,
+      score: d.rounds.reduce((sum, r) => sum + r.score, 0),
+      startedAt: d.startedAt,
+      finishedAt: d.finishedAt || null,
+      rounds: d.rounds,
+    });
+  }
+
+  // An earlier day's climb, left unfinished, is still worth knowing about.
+  function closeStaleDaily() {
+    const d = store.daily;
+    if (d && d.day < today() && !d.done && !d.recorded) {
+      recordDaily(d);
+      saveStore();
+    }
+  }
+
+  // A saved round as a result the screens can draw.
+  function resultFrom(prompt, r) {
+    let answer = null;
+    if (r.name) {
+      // If the catalogue has changed since, keep what was scored at the time.
+      answer = O.find(prompt, r.name, false) || { name: r.name, tier: r.tier, score: r.score, share: null, aliases: [], tail: 'deep' };
+    }
+    return { prompt, raw: r.raw || '', answer, tier: r.tier, score: r.score, left: !!r.left };
+  }
+
+  // The saved daily as a climb in memory: the rounds played, the prompts to come.
+  function dailySession(d) {
+    const planned = O.promptsForDay(d.day);
+    const prompts = planned.map((p, i) => (d.rounds[i] && promptById.get(d.rounds[i].id)) || p);
+    return { mode: 'daily', day: d.day, prompts, results: d.rounds.map((r, i) => resultFrom(prompts[i], r)), roundIndex: 0, phase: 'preview', pausedAt: null };
+  }
+
+  function startDaily() {
+    let d = dailyToday();
+    if (d && d.done) return showDailyResult();
+    if (!d) {
+      closeStaleDaily();
+      d = store.daily = { day: today(), startedAt: Date.now(), open: null, rounds: [], done: false };
+    }
+    S = dailySession(d);
+    if (d.open === d.rounds.length && d.rounds.length < O.ROUNDS) {
+      // This prompt was on screen when the page was left.
+      const round = { id: S.prompts[d.open].id, name: null, raw: '', tier: null, score: 0, ms: null, left: true, misses: [], misfits: [] };
+      d.rounds.push(round);
+      S.results.push(resultFrom(S.prompts[d.open], round));
+    }
+    d.open = null;
+    saveStore();
+    runLabel.textContent = `Daily climb #${d.day}`;
+    syncTower();
+    window.scrollTo(0, 0);
+    if (S.results.length >= O.ROUNDS) finish();
+    else beginRound(S.results.length);
+  }
+
+  // Look again at a daily that is already finished.
+  function showDailyResult() {
+    const d = dailyToday();
+    if (!d || !d.done) return showIntro();
+    S = dailySession(d);
+    runLabel.textContent = `Daily climb #${d.day}`;
+    syncTower();
+    summarise();
+    showResults();
+  }
+
+  // -------------------------------------------------------------------- intro
+
+  let introDay = 0; // the day the home screen was drawn for
 
   // Keep the backdrop in step with the game: how high, and a flag per round.
   function syncTower() {
@@ -130,21 +232,43 @@
     }).join('')}</ul>`;
   }
 
+  // The top of the home screen: today's daily, to play, resume or look back at.
+  function dailyEntryHtml(day, d) {
+    if (!d || !d.done) return `<button class="primary wide" id="daily" type="button">${d ? 'Resume daily' : 'Daily'} climb #${day}</button>`;
+    return `
+      <div class="daily-done">
+        <p class="eyebrow">Daily climb #${day} · done</p>
+        <p class="daily-score"><b>${d.score}</b> / ${O.MAX_SCORE} · floor ${floorOf(d.score)} · ${esc(O.bandFor(d.score).name)}</p>
+        <p class="daily-pips">${d.rounds.map((r) => `<i class="tier-${r.tier || 'miss'}"></i>`).join('')}</p>
+        <div class="actions">
+          <button id="daily" type="button">See the climb</button>
+          <button id="copyDaily" type="button">Copy result</button>
+        </div>
+        <p class="muted">Next daily climb in <b id="countdown">${nextDailyIn()}</b></p>
+      </div>`;
+  }
+
   function showIntro() {
     S = null;
     syncTower();
     runLabel.textContent = '';
+    const day = (introDay = today());
+    const d = dailyToday();
+    const played = !!(d && d.done);
     view.innerHTML = `
       <div class="intro panel">
         <p class="eyebrow">The library tower</p>
         <p class="tagline">7 prompts · 25 seconds each · rarer answers climb higher</p>
         <p class="muted subjects">${Object.values(O.SUBJECTS).map(esc).join(' · ')}</p>
-        <button class="primary wide" id="start" type="button">Start climb #${store.nextRun}</button>
+        ${dailyEntryHtml(day, d)}
+        <button class="${played ? 'primary ' : ''}wide" id="start" type="button">Unlimited climb #${store.nextRun}</button>
         <ol class="how">
+          <li>The daily climb is the same seven prompts for everyone, once a day, with a new one at midnight. Unlimited climbs never run out.</li>
           <li>Each prompt has a long catalogue of valid answers. Type any one of them.</li>
           <li>A guess that isn't in the catalogue costs nothing. Keep trying until the clock runs out.</li>
           <li>The fewer readers who would give your answer, the higher it takes you. Ten points is one floor, and a perfect climb reaches the lantern room on floor ${TOP_FLOOR}.</li>
           <li>Some shelves run deep: hundreds of volcanoes, theorems and composers. Past the best known, everything counts as a ${esc(O.TIERS.obscure.name)}.</li>
+          <li>Daily climbs are recorded without your name (answers, guesses and timing) to improve the catalogues.</li>
         </ol>
         <h3>The shelves</h3>
         ${tiersHtml()}
@@ -154,12 +278,17 @@
       </div>`;
     const start = document.getElementById('start');
     start.addEventListener('click', () => startRun(store.nextRun));
-    start.focus({ preventScroll: true });
+    const daily = document.getElementById('daily');
+    daily.addEventListener('click', startDaily);
+    (played ? start : daily).focus({ preventScroll: true });
+    const copyDaily = document.getElementById('copyDaily');
+    if (copyDaily) copyOnClick(copyDaily, () => shareLine(`daily #${day}`, d.score, d.rounds.map((r) => r.tier)));
     const reset = document.getElementById('reset');
     if (reset) {
       reset.addEventListener('click', () => {
         if (reset.dataset.armed) {
-          store = { nextRun: 1, history: [] };
+          // The log goes; today's daily stays played.
+          store = { nextRun: 1, history: [], daily: store.daily };
           saveStore();
           showIntro();
         } else {
@@ -173,7 +302,7 @@
   // ------------------------------------------------------------------- rounds
 
   function startRun(run) {
-    S = { run, prompts: O.promptsForRun(run), results: [], roundIndex: 0, phase: 'preview', pausedAt: null };
+    S = { mode: 'climb', run, prompts: O.promptsForRun(run), results: [], roundIndex: 0, phase: 'preview', pausedAt: null };
     runLabel.textContent = `Climb #${run}`;
     syncTower();
     window.scrollTo(0, 0);
@@ -199,6 +328,12 @@
     S.phase = 'preview';
     S.previewEndsAt = now + PREVIEW_MS;
     S.answerEndsAt = S.previewEndsAt + ANSWER_MS;
+    S.round = { misses: [], misfits: [], offered: null, typed: null }; // what happens on the way to an answer
+    if (S.mode === 'daily') {
+      // From here the prompt has been seen, whether or not it gets answered.
+      store.daily.open = i;
+      saveStore();
+    }
     view.innerHTML = `
       <div class="round">
         <div class="hud">
@@ -248,6 +383,8 @@
   }
 
   function refuse(raw, misfit) {
+    const turnedAway = misfit ? S.round.misfits : S.round.misses;
+    if (turnedAway.length < GUESS_LIMIT && !turnedAway.includes(raw)) turnedAway.push(raw);
     const text = misfit ? `"${raw}" doesn't fit this prompt. Try again.` : `"${raw}" isn't in the catalogue. Try again.`;
     const input = document.getElementById('answer');
     input.value = '';
@@ -267,9 +404,11 @@
     if (!raw) return;
     const res = O.match(prompt(), raw);
     if (res.type === 'exact') {
-      land(res.answer, raw);
+      land(res.answer, raw, { near: raw === S.round.offered });
     } else if (res.type === 'near') {
       // Show the corrected spelling and let them confirm it with another Enter.
+      S.round.offered = res.answer.name;
+      S.round.typed = raw;
       input.value = res.answer.name;
       input.select();
       setMessage(`Did you mean "${res.answer.name}"? Press Enter to confirm.`, 'hint');
@@ -284,12 +423,30 @@
     const input = document.getElementById('answer');
     const raw = input ? input.value.trim() : '';
     const res = raw ? O.match(prompt(), raw) : { type: 'none' };
-    land(res.type === 'none' ? null : res.answer, raw);
+    land(res.type === 'none' ? null : res.answer, raw, { timeout: true, near: res.type === 'near' || (!!raw && raw === S.round.offered) });
   }
 
-  function land(answer, raw) {
+  function land(answer, raw, how = {}) {
     const result = { prompt: prompt(), raw, answer, tier: answer ? answer.tier : null, score: answer ? answer.score : 0 };
     S.results.push(result);
+    if (S.mode === 'daily') {
+      // Saved at once, with what it took to get here, so the climb can be resumed and recorded.
+      const acceptedSuggestion = how.near && raw === S.round.offered;
+      store.daily.rounds.push({
+        id: result.prompt.id,
+        name: answer ? answer.name : null,
+        raw: acceptedSuggestion ? S.round.typed : raw, // as first typed, before any correction
+        tier: result.tier,
+        score: result.score,
+        ms: Math.round(ANSWER_MS - Math.max(0, S.answerEndsAt - Date.now())),
+        near: !!how.near,
+        timeout: !!how.timeout,
+        misses: S.round.misses,
+        misfits: S.round.misfits,
+      });
+      store.daily.open = null;
+      saveStore();
+    }
     S.phase = 'feedback';
     S.feedbackStartedAt = Date.now();
     S.feedbackEndsAt = S.feedbackStartedAt + FEEDBACK_MS;
@@ -351,6 +508,9 @@
   }
 
   function tick() {
+    const countdown = document.getElementById('countdown');
+    if (countdown) countdown.textContent = S && S.day !== today() ? 'ready now' : nextDailyIn();
+    if (!S && introDay !== today()) showIntro(); // midnight passed with the home screen up
     syncPause();
     if (!S || S.pausedAt) return;
     const now = Date.now();
@@ -381,17 +541,30 @@
 
   // ------------------------------------------------------------------ results
 
-  function finish() {
+  // Work out the totals the results screen shows.
+  function summarise() {
     S.phase = 'done';
-    const total = score();
-    const field = O.simulateField(S.prompts, S.run);
-    S.total = total;
-    S.field = field;
-    S.percentile = O.percentile(field, total);
+    S.total = score();
+    S.field = O.simulateField(S.prompts, S.mode === 'daily' ? DAILY_SEED + S.day : S.run);
+    S.percentile = O.percentile(S.field, S.total);
+  }
 
-    store.history.push({ run: S.run, score: total, tiers: S.results.map((r) => r.tier), at: Date.now() });
+  function finish() {
+    summarise();
+    const entry = { score: S.total, tiers: S.results.map((r) => r.tier), at: Date.now() };
+    if (S.mode === 'daily') {
+      entry.daily = S.day;
+      const d = store.daily;
+      d.done = true;
+      d.score = S.total;
+      d.finishedAt = entry.at;
+      recordDaily(d);
+    } else {
+      entry.run = S.run;
+      store.nextRun = Math.max(store.nextRun, S.run + 1);
+    }
+    store.history.push(entry);
     if (store.history.length > HISTORY_LIMIT) store.history.splice(0, store.history.length - HISTORY_LIMIT);
-    store.nextRun = Math.max(store.nextRun, S.run + 1);
     saveStore();
     showResults();
   }
@@ -533,7 +706,7 @@
     const a = result.answer;
     const said = a
       ? `<span class="rr-answer">${esc(a.name)}</span><span class="muted">${esc(O.TIERS[a.tier].name)} · ${a.tail ? 'from the deep catalogue' : `about ${sharePct(a.share)} of readers would say this`}</span>`
-      : `<span class="rr-answer miss">${result.raw ? `"${esc(result.raw)}"` : 'No answer'}</span><span class="muted">${result.raw ? 'not in the catalogue' : 'the clock ran out'}</span>`;
+      : `<span class="rr-answer miss">${result.raw ? `"${esc(result.raw)}"` : 'No answer'}</span><span class="muted">${result.raw ? 'not in the catalogue' : result.left ? 'left before answering' : 'the clock ran out'}</span>`;
     return `<details class="rr tier-${result.tier || 'miss'}" data-round="${i}">
       <summary>
         <span class="rr-n">${i + 1}</span>
@@ -551,22 +724,38 @@
       .join('')}</ul>`;
   }
 
-  function shareText() {
-    const row = S.results.map((r) => (r.tier ? O.TIERS[r.tier].emoji : O.MISS_EMOJI)).join('');
-    return `Academicrillion climb #${S.run}: floor ${floorOf(S.total)} of ${TOP_FLOOR} (${S.total}/${O.MAX_SCORE})\n${row}`;
+  // The result as text to paste elsewhere: a headline and a row of books.
+  function shareLine(title, total, tiers) {
+    const row = tiers.map((t) => (t ? O.TIERS[t].emoji : O.MISS_EMOJI)).join('');
+    return `Academicrillion ${title}: floor ${floorOf(total)} of ${TOP_FLOOR} (${total}/${O.MAX_SCORE})\n${row}`;
+  }
+
+  function copyOnClick(button, text) {
+    const label = button.textContent;
+    button.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(text());
+        button.textContent = 'Copied';
+      } catch (e) {
+        button.textContent = 'Copy failed';
+      }
+      setTimeout(() => (button.textContent = label), 1800);
+    });
   }
 
   function showResults() {
     const band = O.bandFor(S.total);
+    const daily = S.mode === 'daily';
     view.innerHTML = `
       <div class="results panel">
-        <p class="eyebrow">Climb #${S.run} complete</p>
+        <p class="eyebrow">${daily ? `Daily climb #${S.day}` : `Climb #${S.run}`} complete</p>
         <div class="total"><span class="big" id="total">0</span><span class="muted">/ ${O.MAX_SCORE}</span></div>
         <p class="band"><b>Floor ${floorOf(S.total)} · ${esc(band.name)}.</b> ${esc(band.verdict)}</p>
         <div class="actions">
-          <button class="primary" id="again" type="button">Next climb ∞</button>
+          <button class="primary" id="again" type="button">${daily ? `Unlimited climb #${store.nextRun}` : 'Next climb'} ∞</button>
           <button id="copy" type="button">Copy result</button>
         </div>
+        ${daily ? `<p class="muted onward">That was today's daily. Unlimited climbs never run out. Next daily in <b id="countdown">${nextDailyIn()}</b></p>` : ''}
 
         <h3>The climb</h3>
         ${stairsHtml()}
@@ -589,16 +778,7 @@
     const again = document.getElementById('again');
     again.addEventListener('click', () => startRun(store.nextRun));
     again.focus({ preventScroll: true });
-    const copy = document.getElementById('copy');
-    copy.addEventListener('click', async () => {
-      try {
-        await navigator.clipboard.writeText(shareText());
-        copy.textContent = 'Copied';
-      } catch (e) {
-        copy.textContent = 'Copy failed';
-      }
-      setTimeout(() => (copy.textContent = 'Copy result'), 1800);
-    });
+    copyOnClick(document.getElementById('copy'), () => shareLine(daily ? `daily #${S.day}` : `climb #${S.run}`, S.total, S.results.map((r) => r.tier)));
     window.scrollTo(0, 0);
   }
 
@@ -636,5 +816,6 @@
   document.addEventListener('visibilitychange', tick);
 
   setInterval(tick, 100);
+  closeStaleDaily();
   showIntro();
 })();

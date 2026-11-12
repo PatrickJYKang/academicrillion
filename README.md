@@ -8,6 +8,7 @@ A trivia game set in a library tower. Each prompt has hundreds of right answers,
 
 ## How it plays
 
+- There are two ways up. The **daily climb** is the same seven prompts for everyone and can be played once a day. **Unlimited climbs** are numbered and never run out.
 - A climb is seven prompts, such as "Name a tectonic plate" or "Name a paradox".
 - You see each prompt for 3 seconds, then have 25 seconds to type one answer.
 - A guess that isn't in the catalogue costs nothing. Keep trying until the clock runs out.
@@ -24,9 +25,45 @@ A trivia game set in a library tower. Each prompt has hundreds of right answers,
   | Bestseller | 10 | the first answer on everyone's tongue |
 
 - Ten points is one floor. A perfect climb is 700 points, the lantern room on floor 70.
-- Climbs are numbered and never run out. A given climb number always has the same seven prompts, and no prompt comes back until the others have had a turn.
+- A given climb number always has the same seven prompts, and no prompt comes back until the others have had a turn.
 - There are no other players. The "other climbers" you are ranked against are 2,000 simulated ones.
-- Your history is kept in your browser only.
+- Your climbing log is kept in your browser only.
+
+## The daily climb
+
+- Seven prompts from seven different subjects, the same for everyone on the same date.
+- A new one starts at midnight on the player's own clock. Day 1 was 11 November 2026.
+- It can be played once. Progress is saved after every prompt, so it can be resumed, but a prompt that was on screen when the page was closed counts as missed.
+- A prompt comes back in the daily about four weeks after it was last used.
+- The schedule is pinned in `js/data-daily.js`, so that adding or removing a prompt does not reshuffle a day people have already played. After changing the prompts, run `node tools/build-daily.js`: it keeps every day up to tomorrow and chooses the later ones again.
+
+### What is recorded
+
+Each daily climb is recorded for diagnostics: to see which prompts are too hard and which real answers the catalogues are missing. Unlimited climbs are not recorded.
+
+A record holds a random id made up by the browser, the day's number, the score and, for each prompt, the answer given, the guesses that were turned away and the time taken. It holds no name, account or address.
+
+Records go to a small Cloudflare Worker (`worker/`), which stores them in a D1 database. The Worker only takes records in: nothing can be read back over the web, and it stores nothing about the sender. Its address is `ENDPOINT` at the top of `js/record.js`. If a record cannot be delivered it waits in the browser and is sent on a later visit. A copy of the game running on `localhost` sends nothing.
+
+To look at the records, run queries with Wrangler from the `worker/` folder (you need to be signed in to the Cloudflare account that owns the database):
+
+```bash
+npx wrangler d1 execute academicrillion --remote --command "SELECT day, COUNT(*) AS players, SUM(done) AS finished, ROUND(AVG(score)) AS average FROM climbs GROUP BY day ORDER BY day"
+```
+
+The guesses that were turned away most often are the likeliest missing answers:
+
+```bash
+npx wrangler d1 execute academicrillion --remote --command "SELECT prompt, lower(guess) AS guess, COUNT(*) AS times FROM guesses WHERE kind = 'miss' GROUP BY prompt, lower(guess) ORDER BY times DESC LIMIT 50"
+```
+
+And the prompts people find hardest:
+
+```bash
+npx wrangler d1 execute academicrillion --remote --command "SELECT prompt, COUNT(*) AS plays, ROUND(AVG(score)) AS average, SUM(answer IS NULL) AS unanswered FROM rounds GROUP BY prompt ORDER BY average LIMIT 30"
+```
+
+`worker/schema.sql` describes the `climbs` table and the `rounds` and `guesses` views. To change the Worker, edit `worker/src/index.js` and run `npx wrangler deploy` from `worker/`.
 
 ## What it asks about
 
@@ -59,6 +96,14 @@ To run the tests (Node 18 or newer):
 node test/engine.test.js
 ```
 
+```bash
+node test/record.test.js
+```
+
+```bash
+node test/worker.test.mjs
+```
+
 ## Where the answers come from
 
 A category is one of two kinds.
@@ -78,8 +123,9 @@ The downloaded sets are checked in, so step 3 works without a network connection
 
 1. Add an entry to `js/data-lists.js`. The comment at the top of the file explains the format.
 2. For a deep category, add its query to `tools/sources.js` under the same id, then run the fetch and build steps. Run the build with `--sample` to see what came back, and add a filter in `tools/build-tails.js` if the set is noisy.
-3. Run the tests.
-4. Bump the `?v=` number on the files in `index.html` so browsers pick up the change.
+3. Run `node tools/build-daily.js` so the new prompt joins the daily rotation.
+4. Run the tests.
+5. Bump the `?v=` number on the files in `index.html` so browsers pick up the change.
 
 ## Layout
 
@@ -89,11 +135,15 @@ js/data-lists.js        hand-ranked lists, one per category
 js/data-geo.js          countries, capitals, US states
 js/data-elements.js     chemical elements
 js/data-tails.js        deep catalogues (generated)
+js/data-daily.js        which prompts each day's daily climb gets (generated)
 js/engine.js            matching, scoring, scheduling, simulated players
 js/app.js               the game screens
+js/record.js            records daily climbs for diagnostics
 js/scene.js             the tower drawn behind them
 tools/                  the Wikidata download and build scripts, and their cache
-test/engine.test.js     data and engine checks
+tools/build-daily.js    pins the daily schedule
+worker/                 the Cloudflare Worker and database schema that receive the records
+test/                   data, engine, recorder and Worker checks
 ```
 
 ## Things to know

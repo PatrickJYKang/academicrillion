@@ -4,6 +4,7 @@ require('../js/data-lists.js');
 require('../js/data-geo.js');
 require('../js/data-elements.js');
 if (require('fs').existsSync(__dirname + '/../js/data-tails.js')) require('../js/data-tails.js');
+if (require('fs').existsSync(__dirname + '/../js/data-daily.js')) require('../js/data-daily.js');
 require('../js/engine.js');
 const { SOURCES } = require('../tools/sources.js');
 
@@ -407,6 +408,40 @@ const firstRepeat = (() => {
   return Infinity;
 })();
 ok(firstRepeat > 6, `a prompt repeated as early as run ${firstRepeat}`);
+
+// ---- the daily climb
+const dailySeen = new Map();
+let dailyGap = Infinity;
+for (let day = 1; day <= 200; day++) {
+  const picks = O.promptsForDay(day);
+  ok(picks.length === O.ROUNDS, `day ${day}: ${picks.length} prompts`);
+  ok(new Set(picks.map((p) => p.subject)).size === O.ROUNDS, `day ${day}: two prompts from one subject`);
+  ok(new Set(picks.map((p) => p.group)).size === O.ROUNDS, `day ${day}: two prompts from one family`);
+  for (const p of picks) {
+    if (dailySeen.has(p.id)) dailyGap = Math.min(dailyGap, day - dailySeen.get(p.id));
+    dailySeen.set(p.id, day);
+  }
+}
+ok(dailyGap >= 20, `a daily prompt came back after only ${dailyGap} days`);
+ok(dailySeen.size === all.length, `${all.length - dailySeen.size} prompts never came up in 200 days of dailies`);
+ok(O.promptsForDay(9) === O.promptsForDay(9), 'a day is stable');
+ok(O.promptsForDay(1).map((p) => p.id).join() !== O.promptsForRun(1).map((p) => p.id).join(), 'the daily is its own sequence, not the numbered climbs');
+
+// A day is a calendar day on the player's own clock, counted from the start date.
+const [sy, sm, sd] = O.DAILY_START.split('-').map(Number);
+ok(O.dayNumber(new Date(sy, sm - 1, sd)) === 1 && O.dayNumber(new Date(sy, sm - 1, sd, 23, 59, 59)) === 1, 'day 1 lasts the whole start date');
+ok(O.dayNumber(new Date(sy, sm - 1, sd + 1)) === 2 && O.dayNumber(new Date(sy, sm - 1, sd + 365)) === 366, 'each midnight starts a new day');
+ok(O.dayNumber(new Date(sy, sm - 1, sd - 5)) === 1, 'a clock set before the start still gets day 1');
+
+// The pinned schedule is valid and is what the engine serves.
+if (D.daily) {
+  ok(D.daily.start === O.DAILY_START && D.daily.days.length >= 60, `only ${D.daily.days.length} days pinned`);
+  D.daily.days.forEach((line, i) => {
+    const ids = line.split(' ');
+    ok(ids.length === O.ROUNDS && ids.every((id) => byId.has(id)), `pinned day ${i + 1} names a prompt that does not exist: ${line}`);
+    ok(O.promptsForDay(i + 1).map((p) => p.id).join(' ') === line, `day ${i + 1} is not served as pinned`);
+  });
+}
 
 // ---- the simulated field
 const medians = [];

@@ -292,6 +292,60 @@ button.link {
   padding-bottom: 20px;
 }
 
+.wide + .wide,
+.daily-done + .wide {
+  margin-top: 8px;
+}
+
+/* today's daily, once it has been climbed */
+.daily-done {
+  padding: 14px 16px 12px;
+  border: var(--px) solid var(--ink);
+  background: var(--card);
+  clip-path: var(--notch);
+}
+
+.daily-done p {
+  margin: 0;
+}
+
+.daily-score {
+  margin-top: 6px !important;
+  font-size: 26px;
+  line-height: 1.1;
+}
+
+.daily-score b {
+  font: 20px/1 var(--font-label);
+}
+
+/* one book per prompt, in its shelf's colour */
+.daily-pips {
+  display: flex;
+  gap: 4px;
+  margin: 10px 0 12px !important;
+}
+
+.daily-pips i {
+  width: 14px;
+  height: 22px;
+  background: var(--tier);
+}
+
+.daily-done .actions {
+  margin-bottom: 10px;
+}
+
+.daily-done .actions button {
+  flex: 1;
+}
+
+.onward {
+  margin: 10px 0 0;
+  font-size: 22px;
+  line-height: 1.2;
+}
+
 .how {
   margin: 24px 0 0;
   padding-left: 24px;

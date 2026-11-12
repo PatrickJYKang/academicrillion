@@ -747,34 +747,66 @@
   }
 
   /*
-   * Climbs are numbered from 1 and never end. Each one draws the prompts that
-   * have gone longest without being used (ties broken at random), never two
-   * from the same family and at most two from one subject, so nothing
-   * repeats until everything else has had its turn. The same climb number
-   * always yields the same seven prompts.
+   * A schedule is an endless numbered sequence of seven-prompt sets. Each set
+   * draws the prompts that have gone longest without being used (ties broken
+   * at random), never two from the same family and never more than
+   * `perSubject` from one subject, so nothing repeats until everything else
+   * has had its turn. The same number always yields the same seven prompts.
+   *
+   * `pinned` is an optional list of sets already decided ("id id id ..." per
+   * number). A pinned set is used as written, so that adding a prompt later
+   * does not reshuffle a day people have already played.
    */
-  const schedule = [];
-  const lastUsed = new Map();
-
-  function promptsForRun(run) {
-    while (schedule.length < run) {
-      const n = schedule.length + 1;
-      const rng = mulberry32(Math.imul(n, 0x9e3779b1) ^ 0x5bd1e995);
-      const order = shuffled(prompts, rng).sort((a, b) => (lastUsed.get(a.id) || 0) - (lastUsed.get(b.id) || 0));
-      const families = new Set();
-      const perSubject = {};
-      const picks = [];
-      for (const p of order) {
-        if (picks.length === ROUNDS) break;
-        if (families.has(p.group) || (perSubject[p.subject] || 0) >= MAX_PER_SUBJECT) continue;
-        families.add(p.group);
-        perSubject[p.subject] = (perSubject[p.subject] || 0) + 1;
-        lastUsed.set(p.id, n);
-        picks.push(p);
+  function scheduler(salt, perSubject, pinned) {
+    const schedule = [];
+    const lastUsed = new Map();
+    const byId = new Map(prompts.map((p) => [p.id, p]));
+    const fixed = (n) => {
+      const ids = pinned && pinned[n - 1] ? pinned[n - 1].split(' ') : null;
+      if (!ids || ids.length !== ROUNDS || !ids.every((id) => byId.has(id))) return null;
+      return ids.map((id) => byId.get(id));
+    };
+    return function (number) {
+      while (schedule.length < number) {
+        const n = schedule.length + 1;
+        const rng = mulberry32(Math.imul(n, 0x9e3779b1) ^ salt);
+        let set = fixed(n);
+        if (!set) {
+          const order = shuffled(prompts, rng).sort((a, b) => (lastUsed.get(a.id) || 0) - (lastUsed.get(b.id) || 0));
+          const families = new Set();
+          const taken = {};
+          const picks = [];
+          for (const p of order) {
+            if (picks.length === ROUNDS) break;
+            if (families.has(p.group) || (taken[p.subject] || 0) >= perSubject) continue;
+            families.add(p.group);
+            taken[p.subject] = (taken[p.subject] || 0) + 1;
+            picks.push(p);
+          }
+          set = shuffled(picks, rng);
+        }
+        for (const p of set) lastUsed.set(p.id, n);
+        schedule.push(set);
       }
-      schedule.push(shuffled(picks, rng));
-    }
-    return schedule[run - 1];
+      return schedule[number - 1];
+    };
+  }
+
+  // Unlimited climbs, numbered from 1: at most two prompts from one subject.
+  const promptsForRun = scheduler(0x5bd1e995, MAX_PER_SUBJECT);
+
+  /*
+   * The daily climb: one set a day, the same for everyone, seven prompts from
+   * seven different subjects. Day 1 is DAILY_START, and a day runs from
+   * midnight to midnight on the player's own calendar.
+   */
+  const DAILY = D.daily || { start: '2026-11-11', days: [] };
+  const promptsForDay = scheduler(0x1f83d9ab, 1, DAILY.days);
+
+  function dayNumber(date) {
+    const [y, m, d] = DAILY.start.split('-').map(Number);
+    const days = Math.round((Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) - Date.UTC(y, m - 1, d)) / 86400000);
+    return Math.max(1, days + 1);
   }
 
   // -------------------------------------------------------- the simulated field
@@ -853,6 +885,9 @@
     search,
     prompts,
     promptsForRun,
+    promptsForDay,
+    dayNumber,
+    DAILY_START: DAILY.start,
     simulateField,
     percentile,
   };

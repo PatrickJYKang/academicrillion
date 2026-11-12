@@ -1,0 +1,15 @@
+# The endpoint that receives daily climb records. Deploy with:
+#   npx wrangler deploy          (from this folder)
+name = "academicrillion-records"
+main = "src/index.js"
+compatibility_date = "2026-11-01"
+workers_dev = true
+
+[vars]
+# Pages allowed to send records, comma-separated.
+ALLOWED_ORIGINS = "https://patrickjykang.github.io"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "academicrillion"
+database_id = "15fa1a67-eb53-4b53-ae16-bf4650cd7375"
