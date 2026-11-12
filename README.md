@@ -32,7 +32,7 @@ A trivia game set in a library tower. Each prompt has hundreds of right answers,
 ## The daily climb
 
 - Seven prompts from seven different subjects, the same for everyone on the same date.
-- A new one starts at midnight on the player's own clock. Day 1 was 11 November 2026.
+- A new one starts at midnight UTC, at the same moment for everyone. Day 1 was 11 November 2026.
 - It can be played once. Progress is saved after every prompt, so it can be resumed, but a prompt that was on screen when the page was closed counts as missed.
 - A prompt comes back in the daily about four weeks after it was last used.
 - The schedule is pinned in `js/data-daily.js`, so that adding or removing a prompt does not reshuffle a day people have already played. After changing the prompts, run `node tools/build-daily.js`: it keeps every day up to tomorrow and chooses the later ones again.

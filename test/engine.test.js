@@ -427,11 +427,16 @@ ok(dailySeen.size === all.length, `${all.length - dailySeen.size} prompts never 
 ok(O.promptsForDay(9) === O.promptsForDay(9), 'a day is stable');
 ok(O.promptsForDay(1).map((p) => p.id).join() !== O.promptsForRun(1).map((p) => p.id).join(), 'the daily is its own sequence, not the numbered climbs');
 
-// A day is a calendar day on the player's own clock, counted from the start date.
+// A day is a UTC calendar day counted from the start date, so it changes at
+// the same moment for everyone, whatever their own clock says.
 const [sy, sm, sd] = O.DAILY_START.split('-').map(Number);
-ok(O.dayNumber(new Date(sy, sm - 1, sd)) === 1 && O.dayNumber(new Date(sy, sm - 1, sd, 23, 59, 59)) === 1, 'day 1 lasts the whole start date');
-ok(O.dayNumber(new Date(sy, sm - 1, sd + 1)) === 2 && O.dayNumber(new Date(sy, sm - 1, sd + 365)) === 366, 'each midnight starts a new day');
-ok(O.dayNumber(new Date(sy, sm - 1, sd - 5)) === 1, 'a clock set before the start still gets day 1');
+const utc = (...parts) => new Date(Date.UTC(...parts));
+ok(O.dayNumber(utc(sy, sm - 1, sd)) === 1 && O.dayNumber(utc(sy, sm - 1, sd, 23, 59, 59, 999)) === 1, 'day 1 lasts the whole start date, UTC');
+ok(O.dayNumber(utc(sy, sm - 1, sd + 1)) === 2 && O.dayNumber(utc(sy, sm - 1, sd + 365)) === 366, 'each UTC midnight starts a new day');
+ok(O.dayNumber(utc(sy, sm - 1, sd - 5)) === 1, 'a clock set before the start still gets day 1');
+// 23:30 UTC and 00:30 UTC, each written as a local time eight hours behind and nine ahead.
+ok(O.dayNumber(new Date(O.DAILY_START + 'T15:30:00-08:00')) === 1 && O.dayNumber(new Date(O.DAILY_START + 'T16:30:00-08:00')) === 2, 'an evening in California straddles the change');
+ok(O.dayNumber(new Date(Date.UTC(sy, sm - 1, sd + 1, 8, 30) - 9 * 3600000)) === 1 && O.dayNumber(new Date(Date.UTC(sy, sm - 1, sd + 1, 9, 30) - 9 * 3600000)) === 2, 'so does a morning in Tokyo');
 
 // The pinned schedule is valid and is what the engine serves.
 if (D.daily) {

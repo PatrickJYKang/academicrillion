@@ -411,6 +411,7 @@
       'painting plate natpark unit probe muscle period', // 399 · 2027-12-14
       'datastructure spprov theorem government bone pulitzer tax', // 400 · 2027-12-15
       'cathedral baroque country-in-AS deadlang bias ww1battle raptor', // 401 · 2027-12-16
+      'classical jpref spacefarer bible revolution scilaw artmovement', // 402 · 2027-12-17
     ],
   };
 })(typeof globalThis !== 'undefined' ? globalThis : this);

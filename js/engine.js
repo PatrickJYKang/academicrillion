@@ -798,15 +798,14 @@
   /*
    * The daily climb: one set a day, the same for everyone, seven prompts from
    * seven different subjects. Day 1 is DAILY_START, and a day runs from
-   * midnight to midnight on the player's own calendar.
+   * midnight to midnight UTC, so it changes at the same moment everywhere.
    */
   const DAILY = D.daily || { start: '2026-11-11', days: [] };
   const promptsForDay = scheduler(0x1f83d9ab, 1, DAILY.days);
 
   function dayNumber(date) {
     const [y, m, d] = DAILY.start.split('-').map(Number);
-    const days = Math.round((Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) - Date.UTC(y, m - 1, d)) / 86400000);
-    return Math.max(1, days + 1);
+    return Math.max(1, Math.floor((date.getTime() - Date.UTC(y, m - 1, d)) / 86400000) + 1);
   }
 
   // -------------------------------------------------------- the simulated field

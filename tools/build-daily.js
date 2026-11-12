@@ -23,10 +23,9 @@ if (fs.existsSync(OUT)) require(OUT);
 const D = globalThis.GAME_DATA;
 if (!D.daily) D.daily = { start: START, days: [] };
 
-// The day number of a calendar date, as the engine counts it.
+// Today's day number, as the engine counts it: whole UTC days since the start.
 const [y, m, d] = D.daily.start.split('-').map(Number);
-const numberOf = (date) => Math.max(1, Math.round((Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) - Date.UTC(y, m - 1, d)) / 86400000) + 1);
-const today = numberOf(new Date());
+const today = Math.max(1, Math.floor((Date.now() - Date.UTC(y, m - 1, d)) / 86400000) + 1);
 
 // Keep what has been played; let the engine choose the rest again.
 const kept = Math.min(D.daily.days.length, today + 1);

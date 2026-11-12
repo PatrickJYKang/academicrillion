@@ -132,10 +132,10 @@
   const dailyToday = () => (store.daily && store.daily.day === today() ? store.daily : null);
   const promptById = new Map(O.prompts.map((p) => [p.id, p]));
 
-  // Time left until the next daily, which starts at the player's midnight.
+  // Time left until the next daily, which starts at midnight UTC for everyone.
   function nextDailyIn() {
-    const now = new Date();
-    const left = Math.max(0, new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1) - now);
+    const DAY_MS = 86400000;
+    const left = DAY_MS - (Date.now() % DAY_MS);
     const two = (n) => String(Math.floor(n)).padStart(2, '0');
     return `${two(left / 3600000)}:${two((left / 60000) % 60)}:${two((left / 1000) % 60)}`;
   }
@@ -263,7 +263,7 @@
         ${dailyEntryHtml(day, d)}
         <button class="${played ? 'primary ' : ''}wide" id="start" type="button">Unlimited climb #${store.nextRun}</button>
         <ol class="how">
-          <li>The daily climb is the same seven prompts for everyone, once a day, with a new one at midnight. Unlimited climbs never run out.</li>
+          <li>The daily climb is the same seven prompts for everyone, once a day, with a new one at midnight UTC. Unlimited climbs never run out.</li>
           <li>Each prompt has a long catalogue of valid answers. Type any one of them.</li>
           <li>A guess that isn't in the catalogue costs nothing. Keep trying until the clock runs out.</li>
           <li>The fewer readers who would give your answer, the higher it takes you. Ten points is one floor, and a perfect climb reaches the lantern room on floor ${TOP_FLOOR}.</li>
@@ -510,7 +510,7 @@
   function tick() {
     const countdown = document.getElementById('countdown');
     if (countdown) countdown.textContent = S && S.day !== today() ? 'ready now' : nextDailyIn();
-    if (!S && introDay !== today()) showIntro(); // midnight passed with the home screen up
+    if (!S && introDay !== today()) showIntro(); // the day changed with the home screen up
     syncPause();
     if (!S || S.pausedAt) return;
     const now = Date.now();
