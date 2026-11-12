@@ -150,6 +150,7 @@ test/                   data, engine, recorder and Worker checks
 
 - The percentages shown with an answer ("about 2% of readers would say this") are worked out from its rank in the list. They are not measured from real players.
 - The fact shown with each 100-point answer was written by hand and has not been independently checked.
+- Sets that are written out by hand and still growing go out of date: each year's Booker and Pulitzer winners, a new US national park, a new head of government. They were last checked on 12 November 2026.
 - Wikidata's categories are noisy. The filters remove the worst of it, but some odd answers will remain in the deep catalogues.
 - The data is Wikidata as it stood in November 2026, downloaded through [QLever](https://qlever.dev/), a public mirror run by the University of Freiburg. Wikidata's content is CC0.
 - The format is inspired by the daily dive at [krillion.io](https://krillion.io/). This is an independent project and is not affiliated with it.

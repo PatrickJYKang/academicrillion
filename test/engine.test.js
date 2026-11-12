@@ -84,10 +84,10 @@ const SIZES = {
   spprov: 50,
   jpref: 47,
   county: 48,
-  natpark: 63,
+  natpark: 64,
   shakespeare: 39,
   bible: 73,
-  booker: 61,
+  booker: 62,
   usvp: 50,
   oxbridge: 65,
   plato: 36,
@@ -354,6 +354,10 @@ is('shakespeare', 'lear', 'exact:King Lear');
 is('shakespeare', 'Midsummer Nights Dream', "exact:A Midsummer Night's Dream");
 is('shakespeare', 'Henry IV Part 1', 'exact:Henry IV, Part 1');
 is('booker', 'The Sea', 'exact:The Sea');
+is('booker', 'end of everything', 'exact:The End of Everything');
+is('pulitzer', 'angel down', 'exact:Angel Down');
+is('pulitzerdrama', 'liberation', 'exact:Liberation');
+is('natpark', 'Chiricahua National Park', 'exact:Chiricahua');
 is('booker', 'The Sea, the Sea', 'exact:The Sea, the Sea');
 is('greekplay', 'Oedipus the King', 'exact:Oedipus Rex');
 
