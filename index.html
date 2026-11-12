@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Academicrillion</title>
+    <!-- Pixel fonts. Offline, the page falls back to the system monospace font. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet" />
+    <!-- Bump ?v= on these whenever a file changes, so browsers never mix old and new copies. -->
+    <link rel="stylesheet" href="style.css?v=4" />
+  </head>
+  <body>
+    <canvas id="scene" aria-hidden="true"></canvas>
+    <main class="shell">
+      <header class="top">
+        <button class="brand" id="home" type="button" title="Back to the ground floor">ACADEMICRILLION</button>
+        <span class="run-label" id="runLabel"></span>
+      </header>
+      <section id="view"></section>
+    </main>
+    <script src="js/data-lists.js?v=4"></script>
+    <script src="js/data-geo.js?v=4"></script>
+    <script src="js/data-elements.js?v=4"></script>
+    <script src="js/data-tails.js?v=4"></script>
+    <script src="js/engine.js?v=4"></script>
+    <script src="js/scene.js?v=4"></script>
+    <script src="js/app.js?v=4"></script>
+  </body>
+</html>
