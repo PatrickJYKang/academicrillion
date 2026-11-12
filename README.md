@@ -4,6 +4,8 @@ A trivia game set in a library tower. Each prompt has hundreds of right answers,
 
 **Play it: https://patrickjykang.github.io/academicrillion/**
 
+![An answered prompt: "Name a river more than 1,000 km long". The answer Irtysh is a Back Shelf answer worth 60 points, and the climber goes up six floors of the tower.](docs/screenshot.png)
+
 ## How it plays
 
 - A climb is seven prompts, such as "Name a tectonic plate" or "Name a paradox".
@@ -101,3 +103,7 @@ test/engine.test.js     data and engine checks
 - Wikidata's categories are noisy. The filters remove the worst of it, but some odd answers will remain in the deep catalogues.
 - The data is Wikidata as it stood in November 2026, downloaded through [QLever](https://qlever.dev/), a public mirror run by the University of Freiburg. Wikidata's content is CC0.
 - The format is inspired by the daily dive at [krillion.io](https://krillion.io/). This is an independent project and is not affiliated with it.
+
+## Licence
+
+Academicrillion is free software, released under the [GNU General Public License, version 3](LICENSE).
