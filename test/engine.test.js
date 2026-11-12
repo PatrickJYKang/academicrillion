@@ -97,12 +97,29 @@ const SIZES = {
   'element-all': 118,
   'state-all': 50,
   'statecap-all': 50,
+  china: 34,
+  brazil: 27,
+  mexico: 32,
+  italyregion: 20,
+  swisscanton: 26,
+  turkey: 81,
+  ukcity: 75, // 76 cities, two of them called Bangor
+  sultan: 36,
+  chancellor: 33,
+  frpresident: 25,
+  canadapm: 24,
+  auspm: 31,
+  aminoacid: 21,
+  'country-euro': 21,
+  'country-arableague': 22,
+  'capital-in-AS': 51,
+  'capital-in-AM': 35,
 };
 for (const [id, n] of Object.entries(SIZES)) ok(get(id).answers.length === n, `${id}: ${get(id).answers.length} answers, expected ${n}`);
 
 // ---- every prompt is well formed
 ok(new Set(all.map((p) => p.id)).size === all.length, 'prompt ids must be unique');
-ok(all.length >= 150 && all.length <= 200, `${all.length} prompts; the aim is 150 to 200`);
+ok(all.length >= 290 && all.length <= 320, `${all.length} prompts; the aim is about 300`);
 // Every subject has enough prompts to come up, and no prompt is filed nowhere.
 const perSubjectAll = {};
 for (const p of all) perSubjectAll[p.subject] = (perSubjectAll[p.subject] || 0) + 1;
@@ -198,6 +215,77 @@ is('scilaw', 'ohms law', "exact:Ohm's law");
 is('greekletter', 'pi', 'exact:Pi');
 is('greekletter', 'digamma', 'none');
 is('scotuscase', 'roe vs wade', 'exact:Roe v. Wade');
+
+// the third round of categories
+is('operation', 'overlord', 'exact:Operation Overlord');
+is('operation', 'D-Day', 'exact:Operation Overlord');
+is('siege', 'leningrad', 'exact:Siege of Leningrad');
+is('siege', 'the alamo', 'exact:Battle of the Alamo');
+is('navalbattle', 'trafalgar', 'exact:Battle of Trafalgar');
+is('revwarbattle', 'bunker hill', 'exact:Battle of Bunker Hill');
+is('rebellion', 'boxer', 'exact:Boxer Rebellion');
+is('castle', 'windsor', 'exact:Windsor Castle');
+is('palace', 'versailles', 'exact:Palace of Versailles');
+is('pyramid', 'Khufu', 'exact:Great Pyramid of Giza');
+is('ukuni', 'oxford', 'exact:University of Oxford');
+is('ukuni', 'Durham', 'exact:Durham University');
+is('library', 'bodleian', 'exact:Bodleian Library');
+is('pirate', 'kidd', 'exact:William Kidd');
+is('pirate', 'Captain Morgan', 'exact:Henry Morgan');
+is('chancellor', 'merkel', 'exact:Angela Merkel');
+is('chancellor', 'bismarck', 'exact:Otto von Bismarck');
+is('frpresident', 'de gaulle', 'exact:Charles de Gaulle');
+is('canadapm', 'trudeau', 'exact:Justin Trudeau');
+is('sultan', 'suleiman the magnificent', 'exact:Suleiman the Magnificent');
+is('sultan', 'Mehmed 2', 'exact:Mehmed II');
+is('equation', 'E=mc^2', 'exact:Mass–energy equivalence');
+is('equation', 'e=mc2', 'exact:Mass–energy equivalence');
+is('equation', 'schrodinger', 'exact:Schrödinger equation');
+is('mathconstant', 'e', "exact:Euler's number");
+is('mathconstant', 'pi', 'exact:Pi');
+is('constant', 'planck', 'exact:Planck constant');
+is('latinphrase', 'etc', 'exact:Et cetera');
+is('latinphrase', 'veni vidi vici', 'exact:Veni, vidi, vici');
+is('numeral', 'binary', 'exact:Binary numeral system');
+is('numbertype', 'prime', 'exact:Prime number');
+is('distribution', 'normal', 'exact:Normal distribution');
+is('turkey', 'izmir', 'exact:İzmir');
+is('turkey', 'igdir', 'exact:Iğdır');
+is('china', 'shanxi', 'exact:Shanxi');
+is('china', 'shaanxi', 'exact:Shaanxi');
+is('ukcity', 'londonderry', 'exact:Derry');
+is('ukcity', 'St. Davids', 'exact:St Davids');
+is('mexico', 'mexico', 'exact:State of Mexico');
+is('swisscanton', 'geneve', 'exact:Geneva');
+is('asteroid', 'ceres', 'exact:Ceres');
+is('asteroid', '433 Eros', 'exact:Eros');
+is('asteroid', '4 vesta', 'exact:Vesta');
+is('earlyphil', 'kant', 'exact:Immanuel Kant');
+is('medphil', 'aquinas', 'exact:Thomas Aquinas');
+is('uscity', 'topeka', 'exact:Topeka');
+is('galaxy', 'NGC 1300', 'exact:NGC 1300');
+is('nebula', 'crab', 'exact:Crab Nebula');
+is('galaxy', 'andromeda', 'exact:Andromeda Galaxy');
+is('signlang', 'ASL', 'exact:American Sign Language');
+is('signlang', 'british', 'exact:British Sign Language');
+is('parable', 'the good samaritan', 'exact:Good Samaritan');
+is('parable', 'Parable of the Sower', 'exact:Sower');
+is('grimm', 'frog prince', 'exact:The Frog Prince');
+is('poe', 'raven', 'exact:The Raven');
+is('novel19', 'moby dick', 'exact:Moby-Dick');
+is('cape', 'good hope', 'exact:Cape of Good Hope');
+is('cape', 'horn', 'exact:Cape Horn');
+is('pass', 'khyber', 'exact:Khyber Pass');
+is('scotisland', 'skye', 'exact:Skye');
+is('bank', 'barclays bank', 'exact:Barclays');
+is('orchestra', 'berlin phil', 'none');
+is('orchestra', 'vienna philharmonic orchestra', 'exact:Vienna Philharmonic');
+is('philbranch', 'philosophy of mind', 'exact:Philosophy of mind');
+is('aminoacid', 'glutamate', 'exact:Glutamic acid');
+is('country-euro', 'bulgaria', 'exact:Bulgaria');
+is('country-euro', 'sweden', 'known');
+is('capital-in-AS', 'tokyo', 'exact:Tokyo');
+is('capital-in-AM', 'paris', 'known');
 is('scotuscase', 'Roe versus Wade', 'exact:Roe v. Wade');
 is('scotuscase', 'Brown v Board', 'exact:Brown v. Board of Education');
 is('dickens', 'scrooge', 'exact:Ebenezer Scrooge');

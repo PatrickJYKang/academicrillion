@@ -28,8 +28,14 @@ const bornBetween = (occupation, from, to, extra = '') =>
 // A physical quantity above a threshold, in SI units whatever unit it was recorded in.
 const over = (property, amount) => `?item p:${property}/psn:${property}/wikibase:quantityAmount ?amount . FILTER(?amount > ${amount})`;
 
+// is a kind of ... (never the class itself, nor a mere instance)
+const sub = (qid) => `?item wdt:P279+ wd:${qid} .`;
+const any = (...patterns) => patterns.map((p) => `{ ${p} }`).join(' UNION ');
+const battleOf = (war) => `?item wdt:P31/wdt:P279* wd:Q178561 ; wdt:P361+ wd:${war} .`;
+
 const PAINTER = 'Q1028181';
 const COMPOSER = 'Q36834';
+const PHILOSOPHER = 'Q4964182';
 
 const SOURCES = {
   // ---- physics and chemistry
@@ -42,6 +48,9 @@ const SOURCES = {
   scilaw: [5, '{ ?item wdt:P31/wdt:P279* wd:Q214070 . } UNION { ?item wdt:P31/wdt:P279* wd:Q408891 . }'],
   // anything filed under "acid" whose name says so
   acid: [12, '?item wdt:P279+ wd:Q11158 ; rdfs:label ?name . FILTER(LANG(?name) = "en" && STRENDS(?name, " acid"))'],
+  constant: [3, a('Q173227')],
+  physbranch: [3, a('Q4162444')],
+  labware: [5, kind('Q834028')],
 
   // ---- astronomy and space
   moon: [1, aKindOf('Q2537')],
@@ -49,6 +58,15 @@ const SOURCES = {
   rocket: [8, kind('Q697175')],
   spacetelescope: [3, aKindOf('Q148578')],
   probe: [5, aKindOf('Q26529')],
+  // Catalogue objects have a stub in dozens of bot-written editions, so the floors here are high.
+  star: [15, aKindOf('Q523')],
+  galaxy: [35, aKindOf('Q318')],
+  nebula: [12, aKindOf('Q42372')],
+  asteroid: [40, any(aKindOf('Q3863'), aKindOf('Q2199'))], // asteroids of every kind, and dwarf planets
+  spaceagency: [3, aKindOf('Q17505024')],
+  meteorshower: [3, a('Q105000')],
+  observatory: [8, any(aKindOf('Q1254933'), aKindOf('Q62832'))],
+  startype: [8, sub('Q523')],
 
   // ---- earth science
   rock: [5, kind('Q8063')],
@@ -59,6 +77,11 @@ const SOURCES = {
   cloud: [3, '{ ?item wdt:P31 wd:Q1840368 . } UNION { ?item wdt:P279 ?genus . ?genus wdt:P31 wd:Q1840368 . }'],
   impact: [3, '?item wdt:P31 wd:Q55818 ; wdt:P17 ?country .'], // craters with a country are the ones on Earth
   landform: [15, '?item wdt:P279+ wd:Q271669 .'],
+  wind: [3, kind('Q8094')],
+  glacier: [10, aKindOf('Q35666')],
+  biome: [8, any(a('Q101998'), sub('Q101998'))],
+  trench: [3, a('Q119253')],
+  cave: [10, aKindOf('Q35509')],
 
   // ---- life science
   // fossil genera under Dinosauria (which, awkwardly, includes the birds)
@@ -72,6 +95,15 @@ const SOURCES = {
   raptor: [5, `?item wdt:P171* ?order ; wdt:P105 ?rank . VALUES ?order { wd:Q21736 wd:Q25370 wd:Q25222 wd:Q20639356 } ${SPECIES_UP} ${EN_ARTICLE}`],
   snake: [20, taxon('Q25537662')], // every snake has a stub in a few bot-written editions; 20 keeps the ones people write about
   cellpart: [5, kind('Q45948')], // organelles
+  rodent: [30, taxon('Q10850')],
+  parrot: [25, taxon('Q31431')],
+  deer: [3, taxon('Q23390')],
+  turtle: [15, taxon('Q223044')],
+  cephalopod: [10, taxon('Q128257')],
+  pterosaur: [3, `?item wdt:P171* wd:Q179204 ; wdt:P105 wd:Q34740 . ${EN_ARTICLE}`], // genera
+  canid: [5, `?item wdt:P171* wd:Q25324 ; wdt:P105 wd:Q7432 . ${EN_ARTICLE}`], // species
+  waterfowl: [15, taxon('Q7556')],
+  phylum: [3, '?item wdt:P105 wd:Q38348 ; wdt:P171* wd:Q729 .'], // of the animal kingdom
 
   // ---- mathematics
   theorem: [3, a('Q65943')],
@@ -79,6 +111,12 @@ const SOURCES = {
   mathbranch: [5, a('Q1936384')],
   conjecture: [2, a('Q319141')],
   curve: [5, '?item (wdt:P31|wdt:P279)/wdt:P279* wd:Q161973 .'],
+  greekmath: [3, '?item wdt:P106 wd:Q170790 ; wdt:P1412 wd:Q35497 ; wdt:P31 wd:Q5 .'], // mathematicians who wrote in Ancient Greek
+  mathconstant: [3, a('Q186509')],
+  distribution: [3, kind('Q200726')],
+  numeral: [3, aKindOf('Q122653')],
+  numbertype: [5, sub('Q11563')],
+  equation: [5, aKindOf('Q11345')],
 
   // ---- medicine and psychology
   nobelmed: [1, won('Q80061')],
@@ -91,6 +129,10 @@ const SOURCES = {
   phobia: [3, kind('Q175854')],
   disorder: [15, kind('Q12135')],
   brain: [8, '{ ?item wdt:P31 wd:Q103843052 . } UNION { ?item wdt:P279+ wd:Q1620186 . } UNION { ?item wdt:P361+ wd:Q1073 . }'], // a kind of brain region, or part of the brain
+  antibiotic: [5, any(kind('Q12187'), '?item wdt:P2868 wd:Q12187 .')], // filed as an antibiotic, or given that role
+  cancer: [8, sub('Q12078')],
+  artery: [5, kind('Q9655')],
+  nerve: [5, kind('Q9620')],
 
   // ---- technology and engineering
   proglang: [1, aKindOf('Q9143')],
@@ -101,6 +143,11 @@ const SOURCES = {
   datastructure: [5, kind('Q175263')],
   bridge: [20, aKindOf('Q12280')],
   npp: [5, a('Q134447')],
+  dam: [10, aKindOf('Q12323')],
+  canal: [8, aKindOf('Q12284')],
+  protocol: [8, aKindOf('Q15836568')], // computer network protocols; the wider "communication protocol" class holds products and services
+  shiptype: [5, a('Q2235308')],
+  component: [10, sub('Q11653')], // kinds of component only: its instances are particular masts, chips and products
 
   // ---- history
   emperor: [3, held('Q842606', 'Q18577504')], // Roman and Byzantine
@@ -121,6 +168,17 @@ const SOURCES = {
   ww1battle: [5, '?item wdt:P31/wdt:P279* wd:Q178561 ; wdt:P361+ wd:Q361 .'],
   uscwbattle: [3, '?item wdt:P31/wdt:P279* wd:Q178561 ; wdt:P361+ wd:Q8676 .'],
   polis: [5, a('Q148837')],
+  siege: [10, aKindOf('Q188055')],
+  navalbattle: [8, aKindOf('Q1261499')],
+  ancientcity: [10, a('Q15661340')],
+  pirate: [5, '?item wdt:P106 ?occupation ; wdt:P31 wd:Q5 . VALUES ?occupation { wd:Q201559 wd:Q10729326 }'],
+  operation: [5, '?item wdt:P31/wdt:P279* wd:Q645883 ; wdt:P361+ wd:Q362 .'],
+  rebellion: [12, aKindOf('Q124734')],
+  archsite: [25, a('Q839954')],
+  calendar: [5, aKindOf('Q12132')],
+  revwarbattle: [3, battleOf('Q40949')],
+  civilization: [5, any(aKindOf('Q8432'), a('Q28171280'))],
+  formercountry: [45, aKindOf('Q3024240')],
 
   // ---- geography
   frdept: [1, a('Q6465')],
@@ -137,6 +195,10 @@ const SOURCES = {
   waterfall: [10, aKindOf('Q34038')],
   gulf: [12, '{ ?item wdt:P31 wd:Q39594 . } UNION { ?item wdt:P31 wd:Q1322134 . }'],
   highpoint: [1, '?state wdt:P31 wd:Q3624078 ; wdt:P610 ?item .'], // the highest point of a sovereign state
+  uscity: [3, '?item wdt:P31/wdt:P279* wd:Q515 ; wdt:P17 wd:Q30 ; wdt:P1082 ?people . FILTER(?people > 100000)'],
+  cape: [10, a('Q185113')],
+  pass: [12, aKindOf('Q133056')],
+  scotisland: [5, '?item wdt:P31/wdt:P279* wd:Q23442 ; wdt:P131* wd:Q22 .'],
 
   // ---- language
   officiallang: [1, '?state wdt:P31 wd:Q3624078 ; wdt:P37 ?item .'],
@@ -145,6 +207,10 @@ const SOURCES = {
   figure: [2, '{ ?item wdt:P31|wdt:P279 wd:Q10690215 . } UNION { ?item wdt:P31|wdt:P279 wd:Q1762471 . } UNION { ?item wdt:P31|wdt:P279 wd:Q182545 . }'],
   deadlang: [15, '{ ?item wdt:P31 wd:Q45762 . } UNION { ?item wdt:P31 wd:Q436240 . } UNION { ?item wdt:P31 wd:Q38058796 . }'],
   gramcase: [3, a('Q128234')],
+  romance: [8, sub('Q19814')],
+  germanic: [8, sub('Q21200')],
+  latinphrase: [3, any(a('Q3062294'), '?item wdt:P31 wd:Q187931 ; wdt:P407 wd:Q397 .')], // a Latin phrase, or a phrase whose language is Latin
+  signlang: [3, a('Q34228')],
 
   // ---- literature
   shakeschar: [1, '?item wdt:P1441 ?work . ?work wdt:P50 wd:Q692 .'],
@@ -157,6 +223,12 @@ const SOURCES = {
   dickens: [1, '{ ?item wdt:P1441 ?work . ?work wdt:P50 wd:Q5686 . } UNION { ?item wdt:P170 wd:Q5686 ; wdt:P31 ?fiction . VALUES ?fiction { wd:Q15632617 wd:Q3658341 } }'],
   // knights of the Round Table, and anyone in Le Morte d'Arthur or filed under the Matter of Britain
   arthur: [1, '{ ?item wdt:P463 wd:Q1644266 . } UNION { ?item wdt:P1441 wd:Q1136104 . } UNION { ?item wdt:P1080 wd:Q507738 . } UNION { ?item wdt:P1441 wd:Q507738 . }'],
+  grimm: [3, '?item wdt:P50 wd:Q2793 .'],
+  andersen: [3, '?item wdt:P50 wd:Q5673 .'],
+  poe: [3, '?item wdt:P50 wd:Q16867 .'],
+  novel19: [12, `${any('?item wdt:P7937 wd:Q8261 .', '?item wdt:P136 wd:Q8261 .', '?item wdt:P31 wd:Q8261 .')} ?item wdt:P577 ?date . FILTER(YEAR(?date) >= 1800 && YEAR(?date) < 1900)`],
+  // wrote in Latin, born before 500
+  latinwriter: [15, '?item wdt:P106 ?occupation ; wdt:P1412 wd:Q397 ; wdt:P31 wd:Q5 ; wdt:P569 ?born . FILTER(YEAR(?born) < 500) VALUES ?occupation { wd:Q36180 wd:Q49757 wd:Q201788 wd:Q214917 }'],
 
   // ---- art and architecture
   artmovement: [3, a('Q968159')],
@@ -169,6 +241,12 @@ const SOURCES = {
   museum: [20, aKindOf('Q207694')],
   painting: [20, a('Q3305213')],
   cathedral: [8, '?item wdt:P31/wdt:P279* wd:Q2977 ; wdt:P149/wdt:P279* wd:Q176483 .'],
+  sculpture: [12, any(a('Q860861'), a('Q179700'))], // sculptures and statues
+  vangogh: [3, '?item wdt:P170 wd:Q5582 ; wdt:P31 wd:Q3305213 .'],
+  flemish: [8, bornBetween(PAINTER, 1370, 1680, '?item wdt:P19 ?birthplace . ?birthplace wdt:P17 wd:Q31 .')], // born in what is now Belgium
+  castle: [20, aKindOf('Q23413')],
+  palace: [25, aKindOf('Q16560')],
+  pyramid: [8, aKindOf('Q12516')],
 
   // ---- music and theatre
   // Composers have no reliable "era" in Wikidata, so each era is a span of birth years.
@@ -180,6 +258,9 @@ const SOURCES = {
   ballet: [2, '{ ?item wdt:P31 wd:Q15079786 . } UNION { ?item wdt:P31 wd:Q41425 . } UNION { ?item wdt:P136 wd:Q41425 ; wdt:P31 ?work . VALUES ?work { wd:Q105543609 wd:Q58483083 wd:Q57980469 wd:Q43099869 } }'],
   operahouse: [8, aKindOf('Q153562')],
   anthem: [1, '?state wdt:P31 wd:Q3624078 ; wdt:P85 ?item .'],
+  percussion: [3, sub('Q133163')],
+  orchestra: [8, aKindOf('Q42998')],
+  renaissance: [8, bornBetween(COMPOSER, 1000, 1560)],
 
   // ---- philosophy
   // two levels down at most: the class tree below "fallacy" wanders off into unrelated things
@@ -188,6 +269,11 @@ const SOURCES = {
   philmovement: [5, '{ ?item wdt:P31 wd:Q2915955 . } UNION { ?item wdt:P31 wd:Q1387659 . }'],
   paradox: [3, a('Q483372')],
   thoughtexp: [2, a('Q147027')],
+  // Philosophers by era, again as spans of birth years.
+  medphil: [10, bornBetween(PHILOSOPHER, 400, 1450)],
+  earlyphil: [15, bornBetween(PHILOSOPHER, 1550, 1770)],
+  phil19: [15, bornBetween(PHILOSOPHER, 1770, 1870)],
+  philbranch: [5, a('Q22811234')],
 
   // ---- religion and mythology
   greekgod: [2, aKindOf('Q22989102')],
@@ -199,6 +285,11 @@ const SOURCES = {
   hindu: [3, aKindOf('Q979507')],
   greekmyth: [15, a('Q22988604')],
   bibleperson: [12, a('Q20643955')],
+  creature: [10, any(sub('Q2239243'), a('Q2239243'))], // kinds of creature, not every named giant, demon and titan
+  aztec: [2, aKindOf('Q32066628')],
+  parable: [1, a('Q51632')],
+  holyday: [15, any(aKindOf('Q375011'), aKindOf('Q60075825'))],
+  mahabharata: [3, '?item wdt:P1441 wd:Q8276 .'],
 
   // ---- politics and law
   ukpm: [1, held('Q14211')],
@@ -207,6 +298,7 @@ const SOURCES = {
   government: [10, kind('Q1307214')],
   scotuscase: [3, a('Q19692072')],
   ideology: [15, kind('Q12909644')],
+  legislature: [15, aKindOf('Q11204')],
 
   // ---- economics
   currency: [1, '?state wdt:P31 wd:Q3624078 ; wdt:P38 ?item .'], // the currency of a sovereign state
@@ -218,11 +310,17 @@ const SOURCES = {
   index: [3, aKindOf('Q223371')],
   crisis: [8, '{ ?item wdt:P31/wdt:P279* wd:Q114380 . } UNION { ?item wdt:P31/wdt:P279* wd:Q1020018 . } UNION { ?item wdt:P31/wdt:P279* wd:Q207781 . }'],
   econschool: [3, a('Q3048444')],
+  bank: [12, a('Q22687')],
+  coin: [5, any(sub('Q41207'), a('Q113813711'))],
 
   // ---- academia
   ology: [5, '{ ?item wdt:P31/wdt:P279* wd:Q11862829 . } UNION { ?item wdt:P31/wdt:P279* wd:Q2465832 . } ?item rdfs:label ?name . FILTER(LANG(?name) = "en" && STRENDS(LCASE(?name), "ology"))'],
   olduni: [3, '?item wdt:P31/wdt:P279* wd:Q3918 ; wdt:P571 ?founded . FILTER(YEAR(?founded) < 1500)'],
   journal: [6, '{ ?item wdt:P31 wd:Q5633421 . } UNION { ?item wdt:P31 wd:Q737498 . }'], // scientific or academic journal
+  ukuni: [8, '?item wdt:P31/wdt:P279* wd:Q3918 ; wdt:P17 wd:Q145 .'],
+  prize: [10, aKindOf('Q11448906')],
+  library: [20, aKindOf('Q7075')],
+  society: [15, any(aKindOf('Q955824'), aKindOf('Q414147'))],
 };
 
 // Queries that can share one request. Empty for now: combining even light

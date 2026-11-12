@@ -43,14 +43,18 @@ const MAX_ALSO = 6; // extra names added to a hand-ranked answer
  *   dropName  nor may its name match this
  *   name      its name must match
  *   either    [name, description]: one of the two must match
+ *   strip     taken off every name ("433 Eros" -> "Eros", "Tampa, Florida" -> "Tampa")
  */
 const PAINTER = { want: /painter|artist|fresco|miniaturist|illuminator|draughtsman|engraver|printmaker/i };
 const COMPOSER = { want: /compos/i };
+const PHILOSOPHER = { want: /philosoph/i };
+// "Ancient Greek" is also the language of Byzantine and modern scholars, so the description has to place the person.
+const NOT_ANCIENT = /\b1[0-9]{3}\b|german|english|french|italian|dutch|british|american|russian|spanish|polish|danish|swedish|byzantine|modern|christian|bishop|saint|theologian|church father|jewish|arab|persian|muslim|renaissance|humanist/i;
 const GOD = { want: /\bgods?\b|goddess|deity|deities|titan|personification|spirit|muse\b|primordial|divinit|daimon|numen|æsir|aesir|vanir|ásynj/i, drop: /hero\b|king of|queen of|prince|princess|mortal|pharaoh|vizier|architect|priest/i };
 const NOT_A_LIST = /^(list|lists|outline|index|timeline|history|glossary|category|template) of\b/i;
 // Nothing invented counts, except where the category is itself fiction.
 const FICTION = /fictional|fictitious|character (in|from|of)|video game|comic|manga|anime|television|tv series|film series/i;
-const FICTION_IS_FINE = new Set(['shakeschar', 'homerchar', 'epic', 'aesop', 'opera', 'ballet', 'greekgod', 'romangod', 'egyptgod', 'norse', 'dickens', 'arthur', 'greekmyth', 'hindu', 'genre', 'painting', 'thoughtexp', 'paradox']);
+const FICTION_IS_FINE = new Set(['shakeschar', 'homerchar', 'epic', 'aesop', 'opera', 'ballet', 'greekgod', 'romangod', 'egyptgod', 'norse', 'dickens', 'arthur', 'greekmyth', 'hindu', 'genre', 'painting', 'thoughtexp', 'paradox', 'grimm', 'andersen', 'poe', 'novel19', 'creature', 'aztec', 'mahabharata', 'sculpture', 'vangogh']);
 const FILTERS = {
   // ---- sciences
   particle: { want: /particle|boson|fermion|quark|lepton|meson|baryon|hadron|neutrino|electron|nucleon/i },
@@ -259,6 +263,135 @@ const FILTERS = {
     drop: /newspaper|magazine|trade|daily|gazette|database|abstracting|indexing|government|predatory|encyclopedia|popular science|amateur/i,
     dropName: /^(the wall street journal|national geographic|the world factbook|federal register|music week|mathematical reviews|zbmath)|encyclopedia|sky & telescope/i,
   },
+
+  // ======================================================== added for the 300
+  // ---- physics and chemistry
+  constant: { dropName: /^(light-year|electronvolt|standard atmosphere|astronomical unit|parsec|avogadro number)$/i },
+  physbranch: { drop: /journal|book|society|conference|award/i },
+  labware: { drop: /company|brand|manufactur|kitchen|household|appliance|surgical|cooking|agar|growth medium|culture medium|sewage|waste|compost|space station|experiment on/i, dropName: /^(laboratory equipment|laboratory glassware|hair dryer|refrigerator|freezer|oven|glassware|suribachi)$/i },
+  // ---- astronomy and space
+  star: { drop: /supernova|planetary system|asterism|quasar|black hole|gamma-ray burst|star cluster|hypothetical|biblical|tradition|legend|astrolog/i, dropName: /^(NGC|IC|PGC|UGC|SN|3C|GRB|M) ?\d|bethlehem/i },
+  galaxy: { drop: /cluster of galaxies|galaxy cluster|galaxy group|group of galaxies|supercluster/i, dropName: /cluster$|group$|supercluster/i },
+  nebula: { dropName: /^(heliosphere|nebula|interstellar cloud)$/i },
+  asteroid: { strip: /^\d+ (?=\p{L}[^0-9]*$)/u, dropName: /^\d{4} [A-Z]{1,2}\d*$|meteor/i },
+  spaceagency: { drop: /company|mission|military unit|launch site|spaceport|rocket/i },
+  meteorshower: { dropName: /^(meteor|radiant|meteor shower|meteoroid)$|procession|event$/i },
+  observatory: { either: [/observator|telescope|\barray\b|sternwarte|interferometer|jantar mantar|uraniborg|stjerneborg/i, /observatory/i], drop: /space probe|research station|polar station|university in|academy in|tower in/i, dropName: /probe$|station$|tower$|academy$/i },
+  startype: { dropName: /black hole|supernova|^nova$|hypernova|kilonova|^star$|^(north|south|pole) star$|collapsar|gamma-ray burst|track$|stellar classification|^stars$|stellar population|compact object|magnificent seven|pulsation|kugelblitz/i, drop: /black hole|explosion|region of|diagram/i },
+  // ---- earth science
+  wind: {
+    dropName: /typhoon|hurricane|cyclone|storm|tornado|\b\d{4}\b|depression|derecho|blizzard|circulation|el niño|la niña|^winds?$|oscillation|vortex|front$|^(wind power|wind turbine|wind direction|wind speed|wind chill)|^(thermal|cold drop|atmospheric river|convergence|vertical draft|headwind|tailwind|crosswind|wind gust|downburst|squall line|rear-inflow jet)$|cell$|compass winds/i,
+    drop: /tropical cyclone|typhoon|hurricane|pacific typhoon season|atlantic hurricane|weather event|film|album|novel|company/i,
+  },
+  glacier: { name: /glacier|jökull|ice (shelf|sheet|cap|field|stream|tongue|rumples)|icefield|breen|gletscher|ferner|\bkees\b|fonna|svartisen|glaciar|ghiacciaio|mer de glace/i },
+  biome: { dropName: /^(biome|ecosystem|vegetation|windbreak|microbiome)$|microbio|park$|farm$|^state forest$/i, drop: /association|alliance|phytosociolog|syntaxon|plant community in|protected area|park in|microb|microorganism|plantation|planted|managed|root/i },
+  cave: { drop: /film|album|novel/i },
+  // ---- life science
+  pterosaur: { drop: /ichno|footprint/i },
+  deer: { dropName: /^deer$/i },
+  turtle: { dropName: /^(tortoise|turtle)$/i },
+  phylum: { drop: /obsolete|rejected|nomen/i },
+  // ---- mathematics
+  greekmath: { want: /mathematic|geomet|astronom|philosoph|engineer|scientist|polymath|inventor|geograph/i, drop: NOT_ANCIENT },
+  distribution: { name: /distribution|law$/i, dropName: /^(probability distribution|.*family of.*)$/i },
+  numeral: { dropName: /^(numeral system|positional notation|scientific notation|notation|numerical digit|engineering notation)$/i },
+  numbertype: {
+    name: /numbers?$|integers?$|primes?$|^fraction$|quaternion|octonion|^(integer|decimal)$/i,
+    drop: /physical quantity|quantity|chemi|unit of|identifier|code\b|statistic|econom|demograph|telephone|financ|account|fluid|dimensionless|physics|nuclear|atom|spectroscop|sport|music|song|film|album|ratio of|optic|engineering|registration|postal/i,
+    dropName: /^(number|numbers|serial number|house number|page number|track number|opus number|telephone number|.* quantum number|quantum number|wavenumber|wave number|largest known prime number|large numbers|baryon number|lepton number|skewes's number)$/i,
+  },
+  equation: { name: /equations?$|formula$|law$|identity$|relation$/i, dropName: /^equation$/i },
+  // ---- medicine
+  antibiotic: { dropName: /antibiotics?$|^(antiviral drug|antifungal|antimicrobial)|inhibitors?$|^draco$|^management of/i, drop: /antiviral|antifungal|antineoplastic|chemotherap|anticancer|cancer/i },
+  cancer: { name: /cancer|carcinoma|sarcoma|oma$|omas$|leuk(a)?emia|tumou?r|neoplasm|lymphoma|myeloma/i, dropName: /^(cancer|neoplasm|tumou?r|malignant neoplasm)$|^alcohol and|^(haematoma|hematoma|glaucoma|trachoma|coma|stoma|granuloma|atheroma|xanthoma|keloid)/i },
+  artery: { name: /arter|aort|trunk|circle of willis|\barch\b|branch/i, dropName: /^(artery|arteriole|metarteriole)$/i },
+  nerve: { name: /nerv|plexus|chorda|ganglion/i, dropName: /^(nerve|peripheral nerve|nervous system|.* nervous system)$/i },
+  // ---- technology and engineering
+  dam: { either: [/\bdam\b|barrage|dike|dijk|weir/i, /\bdam\b|barrage/i], drop: /causeway|bridge|town\b|village|municipality|windmills/i },
+  canal: { either: [/canal|kanal|seaway|waterway|naviglio|gracht/i, /canal|waterway/i], drop: /river in|street|neighbou?rhood|district|aqueduct in/i },
+  protocol: { drop: /cryptocurrenc|blockchain|company|video game|web browser|operating system|digital currency|payment system|social network|messaging (service|app)|website|web service|video ?(tele)?conferenc|database|connector|graphics|display interface|audio\/video interface|currency|ledger/i, dropName: /^google |^microsoft |^apple |^(bitcoin|samba)$|ledger|autonomous organization/i },
+  shiptype: { dropName: /^(ship|boat|watercraft|vessel|ship type)$/i },
+  component: {
+    want: /component|diode|transistor|capacitor|resistor|inductor|semiconductor device|switch|sensor|\btube\b|circuit|transducer|relay|oscillator|amplifier|filter|rectifier|electrode|thyristor|electronic device|electrical device/i,
+    drop: /computer|standard|interface|\bbus\b|storage|\bdisk\b|platform|ethernet|network|lamp|light source|headphone|plug|socket|cable|microprocessor|chipset|system on a chip|graphics|brand|manufactur|company|product line|series of|family of|microarchitecture|codename|radar|tower|mast/i,
+    dropName: /^(intel|amd|apple|pentium|geforce|radeon|socket|qualcomm|snapdragon|exynos|core |ryzen|athlon|celeron|xeon|power\d|mips |arm |motorola|zilog|usb|arduino|electronic component)|\d{3,}|\blake$/i,
+  },
+  // ---- history
+  siege: { drop: /film|video game|novel|album/i },
+  navalbattle: { drop: /film|video game|novel/i, dropName: /evacuation/i },
+  operation: { name: /^(operation|case|unternehmen) /i, drop: /film|video game/i },
+  rebellion: {
+    name: /rebellion|revolt|uprising|rising|mutiny|insurrection|putsch|commune|riots?$|jacquerie|fronde|peasants' war/i,
+    drop: /film|album|novel|video game/i,
+    dropName: /^(rebellion|revolt|uprising|mutiny|insurrection)$/i,
+  },
+  calendar: {
+    name: /calendar|^(haab|tzolk)/i,
+    dropName: /^calendar$|calendar (year|date|era|reform|day|month)$|^(advent|wall|desk|perpetual|pin-up|economic|liturgical) calendar|^calendar of saints/i,
+    drop: /software|application|\bapp\b|company|album|film|calendar of saints/i,
+  },
+  revwarbattle: { drop: /film|video game/i },
+  civilization: { drop: /video game|film|novel|album/i, dropName: /^(civilization|ancient civilization|cradle of civilization)$/i },
+  formercountry: {
+    drop: /city in|capital (city )?of|municipality|town in|port city|video game|film|fictional|historical period|period (of|in)|era (of|in)|\bcounty\b|commune|comune|cultural region|region (of|in)|province (of|in)/i,
+    dropName: /^(venice|hamburg|milan|bremen|lübeck|frankfurt|cologne|genoa|florence|ancient egypt|ancient rome|ancient greece|mesopotamia|gaul|thrace)$/i,
+  },
+  // ---- geography
+  uscity: { strip: /, [^,]+$/, drop: /\bcounty\b in|metropolitan area|census-designated|borough of new york|municipality (of|in) puerto rico|puerto rico/i },
+  cape: { name: /cape|cabo|\bcap\b|\bkap\b|head\b|point\b|punta|pointe|\bras\b|land's end|nordkapp|hague|mull of/i },
+  scotisland: { strip: /, [^,]+$/, drop: /archipelago|group of islands|island group|council area|castle/i },
+  // ---- language
+  romance: { want: /language|dialect|variety|lect\b/i, dropName: /languages$|\/|language in|^(romance|vulgar latin|latin)$|^langues| as a |^(?!old |middle )\S+( \S+)? (spanish|portuguese|french|italian|romanian|catalan)$/i, drop: /language family|group of|subgroup|branch of|family of|pidgin|creole/i },
+  germanic: { want: /language|dialect|variety|lect\b/i, dropName: /languages$|\/|language in|^germanic$| as a |^(?!old |middle |early modern )\S+( \S+)* english$|standard german$|^cockney$/i, drop: /language family|group of|subgroup|branch of|family of|pidgin|creole/i },
+  latinphrase: { drop: /film|album|song|novel|\bband\b|company|organi[sz]ation|journal|magazine|episode|video game|encyclical|papal bull|hymn|book|treatise|manuscript|opera|painting|sculpture/i },
+  signlang: { name: /sign|auslan|libras|makaton/i, dropName: /^(sign language|signing)$|literature|grammar|interpret/i },
+  // ---- literature
+  grimm: { drop: /film|opera|ballet|album|collection|edition|book series|television|dictionary|grammar|scholarly/i, dropName: /^(grimms?'? fairy tales|children's and household tales|deutsche sagen|german dictionary|deutsches wörterbuch|german legends|german grammar|deutsche mythologie|german mythology)/i },
+  andersen: { drop: /film|opera|ballet|album|collection|autobiograph|\bnovel\b|travelogue|\bplay\b|poem|television|libretto/i, dropName: /bibliography/i },
+  poe: { drop: /film|album|collection|magazine|edition/i },
+  novel19: { drop: /film|television|series of|trilogy|tetralogy|cycle of|collection|novel sequence/i, dropName: /^(dream of the red chamber|water margin|journey to the west|romance of the three kingdoms)$/i },
+  latinwriter: {
+    drop: /apostle|\bgreek\b|jewish|rabbi|\bpope\b|emperor|patriarch|archbishop of constantinople|desert father|hermit|monastic|neoplaton/i,
+    // Greek authors and churchmen whom Wikidata also credits with Latin
+    dropName: /^pope |basil of caesarea|origen|gregory of (nyssa|nazianzus)|nestorius|cassius dio|appian|john chrysostom|athanasius|plotinus|pachomius|evagrius|nicolaus of damascus|eusebius|cyril|irenaeus|clement of alexandria|justin martyr|polybius|plutarch|galen|ptolemy|strabo|josephus|epictetus|lucian|pausanias|arrian|diodorus|dionysius|porphyry|iamblichus|proclus/i,
+  },
+  // ---- art and architecture
+  sculpture: { drop: /film|album|award|prize|trophy/i },
+  flemish: PAINTER,
+  castle: { drop: /film|video game|novel|city in|town in|municipality|legend|mythical/i },
+  palace: { drop: /film|video game|novel|hotel|casino/i },
+  pyramid: { drop: /scheme|film|album|game show|video game|geometr|polyhedr/i, dropName: /^pyramid$/i },
+  // ---- music
+  percussion: { drop: /company|brand|manufacturer|model of|toy\b|software|class of|family of|classification|category|mobile phone|technique|keyboard instrument|signal|device (that|for|used)|playing/i, dropName: /\binstruments?$|phones?$|\d{2,}|^(vibrating alert|tuning fork|percussion|doorbell|drum stick|clavichord|ship's bell|bones|sea organ|baby rattle)$|alarm/i },
+  orchestra: { drop: /film|album|\bband\b|big band|jazz|dance orchestra|pop\b/i, dropName: /^(orchestra|symphony orchestra|chamber orchestra)$/i },
+  renaissance: COMPOSER,
+  // ---- philosophy
+  medphil: { want: /philosoph|theologian|scholastic|logician|thinker/i },
+  earlyphil: PHILOSOPHER,
+  phil19: PHILOSOPHER,
+  // ---- religion and mythology
+  creature: {
+    drop: /\bgods?\b|goddess|deity|archangel|\bangel\b|saint|king of|queen of|\bhero\b|prophet|personification|\btitan\b|olympian|nymph in|naiad|oceanid|nereid|biblical figure|species of|genus of|taxon|constellation|video game|film|comic|franchise/i,
+    dropName: /^(angel|devil|satan|god|deity|monster|mythical creature|legendary creature|spirit|demon|ghost|lucifer|gabriel|michael|raphael)$/i,
+  },
+  aztec: { drop: /king\b|ruler|emperor|priest|tlatoani|calendar|festival/i },
+  parable: { dropName: /^(matthew|mark|luke|john) \d/i },
+  holyday: { dropName: /^\w+ \d{1,2}, \d{4}$|^(solemnity|holiday|religious holiday|feast day|liturgical year|octave|holy day of obligation|vigil|queen of heaven|sports day|midnight mass)$|^portal:|games$|mitzvah|holidays$/i, drop: /calendar day|day of the year/i },
+  mahabharata: { drop: /weapon|\bbow\b|\bcity\b|kingdom|\briver\b|book of|parva|film|television|group of/i, dropName: /^(pāṇḍava|pandava|kaurava|pandavas|kauravas)$/i },
+  // ---- politics and law
+  legislature: { want: /legislat|parliament|assembly|congress|chamber|house of|senate|council|\bdiet\b|duma/i, drop: /\bcity\b|town|municipality|capital of|village|building|palace|political party|election/i },
+  // ---- economics
+  bank: { drop: /central bank|investment fund|stock exchange|building|type of bank|banking activity/i, dropName: /^(investment banking|x\.com|bank|fannie mae|freddie mac)$/i },
+  coin: { want: /coin/i, drop: /cryptocurrenc|commemorative|collector|series of|euro coins|video game|token/i, dropName: /^(coin|coins|gold coin|silver coin|bullion coin|small change)$|\beuro\b|commemorative|\d{4}/i },
+  // ---- academia
+  ukuni: { name: /universit|college|school|institute|academy|conservatoire/i, drop: /students' union|student union|press\b|library|museum|constituent college|college of the university|hospital|business school|faculty|department|hall of residence/i },
+  prize: { name: /prize|medal|award|lecture/i, drop: /film|music|literary|literature|sport|journalism|photograph|peace prize|television|theat(er|re)/i },
+  library: { name: /librar|biblioth|bibliotek|biblioteca|bücherei/i, dropName: /wikimedia|wikisource|^library$|digital library/i, drop: /software|website|online|digital library|programming|code library/i },
+  society: {
+    name: /society|academy|académie|akademie|accademia|academia|institution|institut\b|association|\bunion\b/i,
+    dropName: /military academy|naval academy|motion picture|air force academy|police academy/i,
+    drop: /art school|film|football|sports|military academy|naval academy|police academy|music school|conservatory|museum|secondary school|high school|drama school|ballet|air force|school in|trade union|political/i,
+  },
 };
 
 // Names must be writable in the data format and typeable by a player.
@@ -277,9 +410,9 @@ function clean(text) {
 // is a trustworthy one. Wikidata's aliases include regional oddities, so an
 // alias is only promoted if it names the kind of thing it is ("Scots pine")
 // or is a word the hand-written lists already use.
-const TAXA = new Set(['shark', 'primate', 'marsupial', 'cetacean', 'wildcat', 'conifer', 'raptor', 'snake']);
+const TAXA = new Set(['shark', 'primate', 'marsupial', 'cetacean', 'wildcat', 'conifer', 'raptor', 'snake', 'rodent', 'parrot', 'deer', 'turtle', 'cephalopod', 'canid', 'waterfowl']);
 const isBinomial = (s) => /^[A-Z][a-z]+ [a-z-]+( [a-z-]+)?$/.test(s);
-const KIND_WORDS = /\b(tree|pine|fir|spruce|cedar|cypress|juniper|larch|yew|hemlock|redwood|podocarp|kauri|shark|dogfish|catshark|wobbegong|monkey|lemur|macaque|gibbon|langur|baboon|tamarin|marmoset|loris|galago|tarsier|kangaroo|wallaby|possum|opossum|bandicoot|dunnart|glider|whale|dolphin|porpoise|cat|lynx|eagle|hawk|falcon|owl|owlet|vulture|kite|harrier|buzzard|kestrel|caracara|osprey|condor|goshawk|sparrowhawk|hobby|snake|python|boa|cobra|viper|rattlesnake|mamba|adder|krait|racer|kingsnake|pitviper|keelback|whipsnake)s?\b/i;
+const KIND_WORDS = /\b(tree|pine|fir|spruce|cedar|cypress|juniper|larch|yew|hemlock|redwood|podocarp|kauri|shark|dogfish|catshark|wobbegong|monkey|lemur|macaque|gibbon|langur|baboon|tamarin|marmoset|loris|galago|tarsier|kangaroo|wallaby|possum|opossum|bandicoot|dunnart|glider|whale|dolphin|porpoise|cat|lynx|eagle|hawk|falcon|owl|owlet|vulture|kite|harrier|buzzard|kestrel|caracara|osprey|condor|goshawk|sparrowhawk|hobby|snake|python|boa|cobra|viper|rattlesnake|mamba|adder|krait|racer|kingsnake|pitviper|keelback|whipsnake|rat|mouse|squirrel|vole|hamster|gerbil|porcupine|marmot|beaver|chipmunk|gopher|lemming|dormouse|jerboa|agouti|parrot|macaw|cockatoo|parakeet|lorikeet|lory|conure|lovebird|parrotlet|deer|muntjac|brocket|turtle|tortoise|terrapin|slider|octopus|squid|cuttlefish|nautilus|fox|wolf|jackal|duck|goose|swan|teal|merganser|scoter|eider|shelduck|wigeon|pintail|pochard|scaup)s?\b/i;
 const KNOWN_WORDS = new Set(O.prompts.flatMap((p) => p.answers.map((a) => O.normalize(a.name))));
 const commonName = (name, aliases) => {
   // "Sand cat" is shaped like a binomial but is already a common name.
@@ -320,7 +453,13 @@ function build(id) {
     if (filter.drop && filter.drop.test(about)) continue;
     if (!FICTION_IS_FINE.has(id) && FICTION.test(about)) continue;
     if (/wikimedia (list|disambiguation|category|template)|\bdisambiguation page\b/i.test(about)) continue;
-    const name = clean(r.title) || clean(r.label);
+    const bare = (text) => {
+      const t = clean(text);
+      if (!t || !filter.strip) return t;
+      const u = t.replace(filter.strip, '');
+      return u ? u[0].toUpperCase() + u.slice(1) : t;
+    };
+    const name = bare(r.title) || bare(r.label);
     if (!name) continue;
     if (filter.dropName && filter.dropName.test(name)) continue;
     if (filter.name && !filter.name.test(name)) continue;
@@ -330,7 +469,7 @@ function build(id) {
     const aliases = [];
     const keys = new Set([key]);
     for (const raw of [r.label, ...(r.alts ? r.alts.split('|') : [])]) {
-      const alias = clean(raw);
+      const alias = bare(raw);
       if (!alias || alias.length < 3) continue;
       const k = O.normalize(alias);
       if (!k || keys.has(k)) continue;

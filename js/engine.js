@@ -351,6 +351,68 @@
     econschool: { suffix: ['school of economics', 'economics', 'school'] },
     oxbridge: { suffix: ['college'] },
     olduni: { prefix: ['university of'], suffix: ['university'] },
+    china: { suffix: ['autonomous region', 'province', 'municipality'] },
+    brazil: { prefix: ['state of'] },
+    mexico: { prefix: ['state of'] },
+    swisscanton: { prefix: ['canton of'] },
+    turkey: { suffix: ['province'] },
+    ukcity: { prefix: ['city of'] },
+    sultan: { prefix: ['sultan'] },
+    constant: { suffix: ['constant'] },
+    physbranch: { suffix: ['physics'] },
+    asteroid: { prefix: ['\\d+'] }, // "433 Eros"
+    galaxy: { suffix: ['dwarf galaxy', 'galaxy'] },
+    nebula: { suffix: ['nebula'] },
+    spaceagency: { suffix: ['space agency'] },
+    observatory: { suffix: ['astronomical observatory', 'observatory', 'observatories'] },
+    startype: { suffix: ['star'] },
+    wind: { suffix: ['winds', 'wind'] },
+    glacier: { suffix: ['glacier'] },
+    trench: { suffix: ['trench', 'trough', 'deep'] },
+    cave: { prefix: ['cave of the', 'cave of'], suffix: ['caverns', 'cavern', 'caves', 'cave', 'grotto'] },
+    parrot: { suffix: ['parrot'] },
+    deer: { suffix: ['deer'] },
+    turtle: { suffix: ['sea turtle', 'turtle', 'tortoise'] },
+    mathconstant: { suffix: ['constant'] },
+    distribution: { suffix: ['distribution'] },
+    numeral: { suffix: ['numeral system', 'numerals', 'numeral'] },
+    numbertype: { suffix: ['numbers', 'number'] },
+    equation: { suffix: ['equations', 'equation'] },
+    cancer: { suffix: ['cancer', 'tumor', 'tumour'] },
+    artery: { suffix: ['arteries', 'artery'] },
+    nerve: { suffix: ['nerves', 'nerve'] },
+    dam: { suffix: ['dam'] },
+    canal: { prefix: ['canal du', 'canal de'], suffix: ['ship canal', 'canal'] },
+    protocol: { suffix: ['protocol'] },
+    siege: { prefix: ['great siege of', 'siege of the', 'siege of', 'fall of', 'battle of the', 'battle of'] },
+    navalbattle: { prefix: ['battle of the', 'battle of', 'battle off'] },
+    pirate: { prefix: ['captain'] },
+    operation: { prefix: ['operation'] },
+    rebellion: { suffix: ['rebellion', 'revolt', 'uprising', 'rising'] },
+    calendar: { suffix: ['calendar'] },
+    revwarbattle: { prefix: ['battles of', 'battle of the', 'battle of', 'siege of', 'capture of'] },
+    civilization: { suffix: ['civilization', 'civilisation', 'culture', 'empire'] },
+    formercountry: { prefix: ['kingdom of the', 'kingdom of', 'republic of', 'duchy of', 'empire of'], suffix: ['empire', 'kingdom', 'republic'] },
+    bigisland: { suffix: ['island'] },
+    cape: { prefix: ['cape of', 'cape', 'cabo de', 'cabo', 'cap'], suffix: ['cape', 'head', 'point'] },
+    territory: { suffix: ['islands', 'island'] },
+    pass: { prefix: ['col du', 'col de la', 'col de', 'passo', 'paso de'], suffix: ['pass'] },
+    scotisland: { prefix: ['isle of'], suffix: ['island', 'isle'] },
+    romance: { suffix: ['language'] },
+    germanic: { suffix: ['language'] },
+    signlang: { suffix: ['sign language'] },
+    castle: { prefix: ['chateau de', 'chateau du', 'castle of the', 'castle of', 'burg', 'castello'], suffix: ['castle', 'fortress'] },
+    palace: { prefix: ['royal palace of', 'palace of the', 'palace of', 'palazzo', 'palais'], suffix: ['palace'] },
+    pyramid: { prefix: ['great pyramid of', 'pyramid of the', 'pyramid of'], suffix: ['pyramid'] },
+    orchestra: { suffix: ['symphony orchestra', 'philharmonic orchestra', 'orchestra', 'philharmonic', 'symphony'] },
+    philbranch: { prefix: ['philosophy of'] },
+    parable: { prefix: ['parable of the'] },
+    holyday: { prefix: ['feast of the'] },
+    legislature: { prefix: ['parliament of the', 'parliament of'], suffix: ['parliament'] },
+    bank: { suffix: ['banking group', 'financial group', 'bank', 'group'] },
+    ukuni: { prefix: ['university of'], suffix: ['university'] },
+    prize: { suffix: ['prize', 'medal', 'award'] },
+    library: { prefix: ['library of'], suffix: ['library'] },
   };
 
   function affixesFor(id) {
@@ -684,16 +746,17 @@
   });
   // A capital of the wrong continent is known, but does not fit.
   const capitalUniverse = universeOf(countries.flatMap((c) => [c.capital, ...c.capitalAliases]));
-  for (const [code, label] of [['EU', 'Europe'], ['AF', 'Africa']]) {
+  const capitalPrompt = (code, label, test) =>
     add({
       id: 'capital-in-' + code,
       subject: 'geo',
       group: 'capital',
       text: `Name a national capital in ${label}`,
-      items: countries.filter((c) => c.continents.includes(code)).map((c) => ({ name: c.capital, aliases: c.capitalAliases })),
+      items: countries.filter(test).map((c) => ({ name: c.capital, aliases: c.capitalAliases })),
       universe: capitalUniverse,
     });
-  }
+  for (const [code, label] of [['EU', 'Europe'], ['AF', 'Africa'], ['AS', 'Asia']]) capitalPrompt(code, label, (c) => c.continents.includes(code));
+  capitalPrompt('AM', 'the Americas', (c) => c.continents.includes('NA') || c.continents.includes('SA'));
 
   // ---- US states
 

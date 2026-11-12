@@ -221,6 +221,8 @@ Nauru;OC;Yaren;I
     ['nato', 'law', 'Name a member of NATO', 'Albania|Belgium|Bulgaria|Canada|Croatia|Czechia|Denmark|Estonia|Finland|France|Germany|Greece|Hungary|Iceland|Italy|Latvia|Lithuania|Luxembourg|Montenegro|Netherlands|North Macedonia|Norway|Poland|Portugal|Romania|Slovakia|Slovenia|Spain|Sweden|Turkey|United Kingdom|United States'],
     ['monarchy', 'law', 'Name a country that has a monarch', 'United Kingdom|Canada|Australia|New Zealand|Jamaica|Bahamas|Belize|Grenada|Antigua and Barbuda|Saint Kitts and Nevis|Saint Lucia|Saint Vincent and the Grenadines|Papua New Guinea|Solomon Islands|Tuvalu|Spain|Sweden|Norway|Denmark|Netherlands|Belgium|Luxembourg|Liechtenstein|Monaco|Andorra|Vatican City|Japan|Thailand|Cambodia|Malaysia|Brunei|Bhutan|Saudi Arabia|Jordan|Kuwait|Bahrain|Qatar|United Arab Emirates|Oman|Morocco|Lesotho|Eswatini|Tonga'],
     ['oecd', 'econ', 'Name a member of the OECD', 'Australia|Austria|Belgium|Canada|Chile|Colombia|Costa Rica|Czechia|Denmark|Estonia|Finland|France|Germany|Greece|Hungary|Iceland|Ireland|Israel|Italy|Japan|South Korea|Latvia|Lithuania|Luxembourg|Mexico|Netherlands|New Zealand|Norway|Poland|Portugal|Slovakia|Slovenia|Spain|Sweden|Switzerland|Turkey|United Kingdom|United States'],
+    ['euro', 'econ', 'Name a country in the eurozone', 'Germany|France|Italy|Spain|Netherlands|Ireland|Belgium|Greece|Portugal|Austria|Finland|Luxembourg|Croatia|Malta|Cyprus|Estonia|Slovakia|Slovenia|Latvia|Lithuania|Bulgaria'],
+    ['arableague', 'law', 'Name a member of the Arab League', 'Egypt|Saudi Arabia|Iraq|United Arab Emirates|Morocco|Syria|Jordan|Lebanon|Qatar|Kuwait|Libya|Tunisia|Algeria|Yemen|Oman|Bahrain|Sudan|Palestine|Somalia|Mauritania|Djibouti|Comoros'],
   ];
 
   D.states = `

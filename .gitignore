@@ -1,3 +1,5 @@
 .DS_Store
 .wrangler/
 node_modules/
+tools/cache/.last
+tools/cache/.slow

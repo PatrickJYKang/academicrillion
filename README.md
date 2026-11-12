@@ -34,7 +34,7 @@ A trivia game set in a library tower. Each prompt has hundreds of right answers,
 - Seven prompts from seven different subjects, the same for everyone on the same date.
 - A new one starts at midnight UTC, at the same moment for everyone. Day 1 was 11 November 2026.
 - It can be played once. Progress is saved after every prompt, so it can be resumed, but a prompt that was on screen when the page was closed counts as missed.
-- A prompt comes back in the daily about four weeks after it was last used.
+- A prompt comes back in the daily about six weeks after it was last used.
 - The schedule is pinned in `js/data-daily.js`, so that adding or removing a prompt does not reshuffle a day people have already played. After changing the prompts, run `node tools/build-daily.js`: it keeps every day up to tomorrow and chooses the later ones again.
 
 ### What is recorded
@@ -67,16 +67,16 @@ npx wrangler d1 execute academicrillion --remote --command "SELECT prompt, COUNT
 
 ## What it asks about
 
-199 prompts and about 50,000 accepted answers, across 18 subjects. A climb takes at most two prompts from any one subject.
+308 prompts and about 72,000 accepted answers, across 18 subjects. A climb takes at most two prompts from any one subject.
 
 | | | |
 |---|---|---|
-| Physics & Chemistry (9) | Astronomy & Space (6) | Earth Science (9) |
-| Life Science (10) | Mathematics (6) | Medicine & Psychology (11) |
-| Technology & Engineering (8) | History (22) | Geography (33) |
-| Language (8) | Literature (14) | Art & Architecture (9) |
-| Music & Theatre (11) | Philosophy (6) | Religion & Mythology (10) |
-| Politics & Law (13) | Economics (10) | Academia (4) |
+| Physics & Chemistry (12) | Astronomy & Space (14) | Earth Science (14) |
+| Life Science (20) | Mathematics (12) | Medicine & Psychology (15) |
+| Technology & Engineering (13) | History (34) | Geography (48) |
+| Language (12) | Literature (20) | Art & Architecture (15) |
+| Music & Theatre (14) | Philosophy (10) | Religion & Mythology (15) |
+| Politics & Law (19) | Economics (13) | Academia (8) |
 
 Popular culture, sport and food are left out on purpose.
 
