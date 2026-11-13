@@ -54,7 +54,7 @@ Traffic, one row per day: visitors, how many of them were new, who played the da
 npx wrangler d1 execute academicrillion --remote --command "SELECT * FROM traffic"
 ```
 
-A visitor is a browser, so one person on a phone and a laptop counts twice. Visits have been counted since 12 November 2026; earlier days show daily players only.
+A visitor is a browser, so one person on a phone and a laptop counts twice. Days are UTC days. Visits have been counted since 13 November 2026; earlier days show daily players only.
 
 How the daily went, day by day:
 

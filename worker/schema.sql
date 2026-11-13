@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS visits (
 CREATE INDEX IF NOT EXISTS visits_day ON visits (day);
 
 -- Traffic, one row per day. A visitor is new on the first day their browser
--- shows up in either table. Visits were not counted before 12 November 2026,
+-- shows up in either table. Visits were not counted before 13 November 2026,
 -- so earlier days show daily players only.
 CREATE VIEW IF NOT EXISTS traffic AS
 SELECT d.day,
