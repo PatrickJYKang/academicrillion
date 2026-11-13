@@ -154,6 +154,11 @@
     });
   }
 
+  // Traffic is counted, never traced: one visit per browser per day, and how
+  // many unlimited climbs it started and finished.
+  const countVisit = () => window.RECORDER && window.RECORDER.visit(today());
+  const countClimb = (what) => window.RECORDER && window.RECORDER.unlimited(today(), what);
+
   // An earlier day's climb, left unfinished, is still worth knowing about.
   function closeStaleDaily() {
     const d = store.daily;
@@ -253,6 +258,7 @@
     syncTower();
     runLabel.textContent = '';
     const day = (introDay = today());
+    countVisit();
     const d = dailyToday();
     const played = !!(d && d.done);
     view.innerHTML = `
@@ -268,7 +274,7 @@
           <li>A guess that isn't in the catalogue costs nothing. Keep trying until the clock runs out.</li>
           <li>The fewer readers who would give your answer, the higher it takes you. Ten points is one floor, and a perfect climb reaches the lantern room on floor ${TOP_FLOOR}.</li>
           <li>Some shelves run deep: hundreds of volcanoes, theorems and composers. Past the best known, everything counts as a ${esc(O.TIERS.obscure.name)}.</li>
-          <li>Daily climbs are recorded without your name (answers, guesses and timing) to improve the catalogues.</li>
+          <li>Daily climbs are recorded without your name (answers, guesses and timing) to improve the catalogues. Visits and unlimited climbs are counted, also without your name.</li>
         </ol>
         <h3>The shelves</h3>
         ${tiersHtml()}
@@ -302,6 +308,7 @@
   // ------------------------------------------------------------------- rounds
 
   function startRun(run) {
+    countClimb('started');
     S = { mode: 'climb', run, prompts: O.promptsForRun(run), results: [], roundIndex: 0, phase: 'preview', pausedAt: null };
     runLabel.textContent = `Climb #${run}`;
     syncTower();
@@ -562,6 +569,7 @@
     } else {
       entry.run = S.run;
       store.nextRun = Math.max(store.nextRun, S.run + 1);
+      countClimb('finished');
     }
     store.history.push(entry);
     if (store.history.length > HISTORY_LIMIT) store.history.splice(0, store.history.length - HISTORY_LIMIT);

@@ -39,13 +39,24 @@ A trivia game set in a library tower. Each prompt has hundreds of right answers,
 
 ### What is recorded
 
-Each daily climb is recorded for diagnostics: to see which prompts are too hard and which real answers the catalogues are missing. Unlimited climbs are not recorded.
+Two things are recorded, for diagnostics. Neither holds a name, account or address; both hold a random id made up by the browser.
 
-A record holds a random id made up by the browser, the day's number, the score and, for each prompt, the answer given, the guesses that were turned away and the time taken. It holds no name, account or address.
+- **Daily climbs**, to see which prompts are too hard and which real answers the catalogues are missing: the day's number, the score and, for each prompt, the answer given, the guesses that were turned away and the time taken.
+- **Visits**, to see how many people come: one record per browser per day the game is opened, with how many unlimited climbs it started and finished that day. What was answered in an unlimited climb is not recorded.
 
 Records go to a small Cloudflare Worker (`worker/`), which stores them in a D1 database. The Worker only takes records in: nothing can be read back over the web, and it stores nothing about the sender. Its address is `ENDPOINT` at the top of `js/record.js`. If a record cannot be delivered it waits in the browser and is sent on a later visit. A copy of the game running on `localhost` sends nothing.
 
-To look at the records, run queries with Wrangler from the `worker/` folder (you need to be signed in to the Cloudflare account that owns the database):
+To look at the records, run queries with Wrangler from the `worker/` folder (you need to be signed in to the Cloudflare account that owns the database).
+
+Traffic, one row per day: visitors, how many of them were new, who played the daily, and how many unlimited climbs were played:
+
+```bash
+npx wrangler d1 execute academicrillion --remote --command "SELECT * FROM traffic"
+```
+
+A visitor is a browser, so one person on a phone and a laptop counts twice. Visits have been counted since 12 November 2026; earlier days show daily players only.
+
+How the daily went, day by day:
 
 ```bash
 npx wrangler d1 execute academicrillion --remote --command "SELECT day, COUNT(*) AS players, SUM(done) AS finished, ROUND(AVG(score)) AS average FROM climbs GROUP BY day ORDER BY day"
@@ -63,7 +74,7 @@ And the prompts people find hardest:
 npx wrangler d1 execute academicrillion --remote --command "SELECT prompt, COUNT(*) AS plays, ROUND(AVG(score)) AS average, SUM(answer IS NULL) AS unanswered FROM rounds GROUP BY prompt ORDER BY average LIMIT 30"
 ```
 
-`worker/schema.sql` describes the `climbs` table and the `rounds` and `guesses` views. To change the Worker, edit `worker/src/index.js` and run `npx wrangler deploy` from `worker/`.
+`worker/schema.sql` describes the `climbs` and `visits` tables and the `rounds`, `guesses` and `traffic` views. To change the Worker, edit `worker/src/index.js` and run `npx wrangler deploy` from `worker/`. After changing the schema, run `npx wrangler d1 execute academicrillion --remote --file schema.sql` there too.
 
 ## What it asks about
 
@@ -138,7 +149,7 @@ js/data-tails.js        deep catalogues (generated)
 js/data-daily.js        which prompts each day's daily climb gets (generated)
 js/engine.js            matching, scoring, scheduling, simulated players
 js/app.js               the game screens
-js/record.js            records daily climbs for diagnostics
+js/record.js            records daily climbs and counts visits
 js/scene.js             the tower drawn behind them
 tools/                  the Wikidata download and build scripts, and their cache
 tools/build-daily.js    pins the daily schedule

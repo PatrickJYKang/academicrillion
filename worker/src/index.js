@@ -1,7 +1,11 @@
 /*
- * Where daily climbs are recorded: a Cloudflare Worker in front of a D1
- * database. The game posts { records: [...] } (see js/record.js); each record
- * becomes one row, replacing any earlier row for the same player and day.
+ * Where play is recorded: a Cloudflare Worker in front of a D1 database. The
+ * game posts { records: [...] } (see js/record.js), and each record becomes
+ * one row:
+ *   a daily climb  in `climbs`, replacing any earlier row for the same
+ *                  player and day
+ *   a visit        (kind: 'visit') in `visits`, one row per player per day,
+ *                  whose counts of unlimited climbs only ever go up
  *
  * The Worker only takes records in. There is no way to read them back over
  * the web: look at them with `wrangler d1 execute` (see the README).
@@ -50,10 +54,34 @@ function clean(record) {
   };
 }
 
+// A visit: who came on which day, and how many unlimited climbs they played.
+function cleanVisit(record) {
+  if (!record || typeof record !== 'object') return null;
+  const player = text(record.player, 64);
+  const day = whole(record.day, 1, 100000);
+  if (!player || !/^[\w-]+$/.test(player) || day === null) return null;
+  return {
+    key: `${player}:${day}`,
+    player,
+    day,
+    started: whole(record.started, 0, 1000) || 0,
+    finished: whole(record.finished, 0, 1000) || 0,
+    firstAt: whole(record.firstAt, 0, 1e14),
+    v: whole(record.v, 0, 1000) || 0,
+  };
+}
+
 const INSERT = `INSERT INTO climbs (key, player, day, done, score, started_at, finished_at, received_at, v, rounds)
   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   ON CONFLICT (key) DO UPDATE SET done = excluded.done, score = excluded.score, started_at = excluded.started_at,
     finished_at = excluded.finished_at, received_at = excluded.received_at, v = excluded.v, rounds = excluded.rounds`;
+
+// The counts are running totals for the day, so the larger one is the later one
+// even if two records arrive out of order.
+const INSERT_VISIT = `INSERT INTO visits (key, player, day, started, finished, first_at, received_at, updated_at, v)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  ON CONFLICT (key) DO UPDATE SET started = MAX(started, excluded.started), finished = MAX(finished, excluded.finished),
+    updated_at = excluded.updated_at, v = excluded.v`;
 
 export default {
   async fetch(request, env) {
@@ -63,7 +91,7 @@ export default {
     const reply = (status, message) => new Response(message, { status, headers: cors });
 
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: { ...cors, 'Access-Control-Allow-Methods': 'POST', 'Access-Control-Max-Age': '86400' } });
-    if (request.method !== 'POST') return reply(200, 'Academicrillion daily climb records. POST only.');
+    if (request.method !== 'POST') return reply(200, 'Academicrillion play records. POST only.');
     // Records are only expected from the game's own pages.
     if (!allowed.includes(origin)) return reply(403, 'not from the game');
 
@@ -77,12 +105,17 @@ export default {
     }
     if (!Array.isArray(records) || !records.length || records.length > MAX_RECORDS) return reply(400, 'expected { records: [...] }');
 
-    const rows = records.map(clean).filter(Boolean);
-    if (!rows.length) return reply(400, 'no usable records');
+    const isVisit = (r) => !!r && r.kind === 'visit';
+    const rows = records.filter((r) => !isVisit(r)).map(clean).filter(Boolean);
+    const visits = records.filter(isVisit).map(cleanVisit).filter(Boolean);
+    if (!rows.length && !visits.length) return reply(400, 'no usable records');
     const now = Date.now();
-    await env.DB.batch(rows.map((r) => env.DB.prepare(INSERT).bind(r.key, r.player, r.day, r.done, r.score, r.startedAt, r.finishedAt, now, r.v, r.rounds)));
-    return reply(200, `stored ${rows.length}`);
+    await env.DB.batch([
+      ...rows.map((r) => env.DB.prepare(INSERT).bind(r.key, r.player, r.day, r.done, r.score, r.startedAt, r.finishedAt, now, r.v, r.rounds)),
+      ...visits.map((r) => env.DB.prepare(INSERT_VISIT).bind(r.key, r.player, r.day, r.started, r.finished, r.firstAt, now, now, r.v)),
+    ]);
+    return reply(200, `stored ${rows.length + visits.length}`);
   },
 };
 
-export { clean };
+export { clean, cleanVisit };
